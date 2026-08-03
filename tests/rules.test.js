@@ -107,6 +107,17 @@ test('свои слова проходят проверку', () => {
   assert.equal(check('кибердрон', { custom: ['кибердрон'] }).ok, true);
 });
 
+// ---------------- Исправление опечаток ----------------
+test('опечатка → typo с предложением исправления', () => {
+  const st = makeState({});
+  st.correct = (nk) => (nk === 'малоко' ? { key: 'молоко', display: 'молоко' } : null);
+  const r = Rules.checkMove('малоко', st);
+  assert.equal(r.reason, 'typo');
+  assert.equal(r.suggestion, 'молоко');
+  assert.equal(r.correctKey, 'молоко');
+  assert.equal(r.overridable, true);
+});
+
 // ---------------- rootKey ----------------
 test('корневой ключ', () => {
   assert.equal(Morph.rootKey('трава'), Morph.rootKey('травка'));

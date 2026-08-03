@@ -119,6 +119,7 @@ def build_full():
     print("Перечисляю словарные леммы (сущ. + прил. + имена + гео)…", flush=True)
     morph = pymorphy3.MorphAnalyzer()
     nouns, adjs, names, geo = set(), set(), set(), set()
+    hyph = {}   # нормализованный ключ -> дефисное написание (для показа подсказок)
     seen = 0
     for word, tag, normal, para_id, idx in morph.dictionary.iter_known_words():
         seen += 1
@@ -144,14 +145,17 @@ def build_full():
             geo.add(nk)
         else:
             (nouns if pos == "NOUN" else adjs).add(nk)
+            if "-" in word:
+                hyph[nk] = word.lower()   # дефисное написание для показа
 
     # прилагательное-омоним не дублируем в существительных
     full = nouns | adjs
     names -= full        # если слово есть и как нарицательное — оно в full
     geo -= full
+    hyph = {k: v for k, v in hyph.items() if k in full}
     print(f"  сущ.: {len(nouns):,} | прил.: {len(adjs):,} | всего нариц.: {len(full):,}")
-    print(f"  имена/фамилии: {len(names):,} | города/страны/гео: {len(geo):,}")
-    build_full.extra = {"names": names, "geo": geo}
+    print(f"  имена/фамилии: {len(names):,} | города/страны/гео: {len(geo):,} | дефисных: {len(hyph):,}")
+    build_full.extra = {"names": names, "geo": geo, "hyph": hyph}
     return full, nouns, adjs, morph
 
 # ------------------------------------------------------------------ 2. частотный тир
@@ -244,10 +248,12 @@ def main():
 
     names = build_full.extra["names"]
     geo = build_full.extra["geo"]
+    hyph = build_full.extra["hyph"]
     full_sorted = sorted(full)
     other_sorted = sorted(other)
     names_sorted = sorted(names)
     geo_sorted = sorted(geo)
+    hyph_sorted = sorted(hyph.values())   # дефисные написания (ключ = norm(написание))
 
     # --- текстовые дампы для verify/глаз ---
     def dump(name, arr):
@@ -255,16 +261,18 @@ def main():
             f.write("\n".join(arr))
     dump("full.txt", full_sorted); dump("freq.txt", freq_order)
     dump("other.txt", other_sorted); dump("names.txt", names_sorted); dump("geo.txt", geo_sorted)
+    dump("hyph.txt", hyph_sorted)
 
     # --- JS-данные для приложения ---
     fc_full = front_code(full_sorted)
     fc_other = front_code(other_sorted)
     fc_names = front_code(names_sorted)
     fc_geo = front_code(geo_sorted)
+    fc_hyph = front_code(hyph_sorted)
     freq_join = "\n".join(freq_order)          # порядок важен -> без front-coding
     meta = {"nouns": len(nouns), "adjs": len(adjs), "full": len(full),
             "freq": len(freq_order), "other": len(other),
-            "names": len(names), "geo": len(geo)}
+            "names": len(names), "geo": len(geo), "hyph": len(hyph)}
 
     js_path = os.path.join(DATA, "dict-data.js")
     with open(js_path, "w", encoding="utf-8") as f:
@@ -275,6 +283,7 @@ def main():
         f.write("window.DOTHER=`" + fc_other + "`;\n")
         f.write("window.DNAMES=`" + fc_names + "`;\n")
         f.write("window.DGEO=`" + fc_geo + "`;\n")
+        f.write("window.DHYPH=`" + fc_hyph + "`;\n")
 
     size = os.path.getsize(js_path)
     print(f"\nГотово. {js_path}  ({size/1024:.0f} КБ, до gzip)")

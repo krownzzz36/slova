@@ -144,6 +144,10 @@
   .override{display:none; margin:6px auto 0; border:1px solid var(--accent); background:var(--card); color:var(--accent);
             border-radius:12px; padding:11px 18px; min-height:44px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit}
   .override.on{display:block}
+  .fixbtn{display:none; margin:6px auto 0; border:0; background:var(--accent); color:#fff;
+          border-radius:12px; padding:12px 20px; min-height:46px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit}
+  .fixbtn.on{display:block}
+  .msg .cg{color:var(--ok); font-weight:800}
 
   .hitem{display:flex; align-items:baseline; gap:9px; padding:8px 12px; background:var(--card);
          border:1px solid var(--line); border-radius:13px; margin-bottom:5px}
@@ -493,6 +497,7 @@
     </div>
     <div class="msgwrap">
       <div class="msg" id="msg"></div>
+      <button type="button" class="fixbtn" id="fixBtn">✓ Исправить</button>
       <button type="button" class="override" id="overrideBtn">Всё равно засчитать</button>
     </div>
 
@@ -597,13 +602,13 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=8" defer></script>
-<script src="src/morph.js?v=8" defer></script>
-<script src="src/dict.js?v=8" defer></script>
-<script src="src/stats.js?v=8" defer></script>
-<script src="src/storage.js?v=8" defer></script>
-<script src="src/sharecard.js?v=8" defer></script>
-<script src="src/ui.js?v=8" defer></script>
+<script src="src/rules.js?v=9" defer></script>
+<script src="src/morph.js?v=9" defer></script>
+<script src="src/dict.js?v=9" defer></script>
+<script src="src/stats.js?v=9" defer></script>
+<script src="src/storage.js?v=9" defer></script>
+<script src="src/sharecard.js?v=9" defer></script>
+<script src="src/ui.js?v=9" defer></script>
 
 <!-- «Живая литера»: орнамент хохломы в сцене + split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>

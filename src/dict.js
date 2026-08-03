@@ -25,7 +25,8 @@
   }
 
   var full = null, other = null, names = null, geo = null, freq = [], firstCount = {}, meta = {};
-  var ready = false;
+  var hyphMap = {}, freqPos = {}, ready = false;
+  var ALPHA = 'абвгдежзийклмнопрстуфхцчшщъыьэюя';
 
   function build(g) {
     g = g || (typeof window !== 'undefined' ? window : {});
@@ -35,8 +36,10 @@
     geo = new Set(expand(g.DGEO || ''));
     freq = (g.DFREQ || '').split('\n').filter(Boolean);
     meta = g.DICT_META || {};
-    firstCount = {};
+    firstCount = {}; freqPos = {}; hyphMap = {};
     full.forEach(function (w) { firstCount[w[0]] = (firstCount[w[0]] || 0) + 1; });
+    for (var i = 0; i < freq.length; i++) freqPos[freq[i]] = i;
+    expand(g.DHYPH || '').forEach(function (disp) { if (disp && Rules) hyphMap[Rules.norm(disp)] = disp; });
     ready = true;
     return api;
   }
@@ -46,6 +49,32 @@
   function hasName(nk) { return !!names && names.has(nk); }
   function hasGeo(nk) { return !!geo && geo.has(nk); }
   function hasProper(nk) { return hasName(nk) || hasGeo(nk); }
+  // Дефисное написание для нормализованного ключа (иначе — сам ключ).
+  function display(nk) { return (hyphMap[nk]) || nk; }
+
+  // Исправление опечатки: ближайшее реальное слово на расстоянии 1 правки, первая
+  // буква не меняется. Возвращает {key, display} или null. Быстро (генерация правок).
+  function correct(nk, used) {
+    if (!full || !nk || nk.length < 5) return null;
+    var cand = {}, w = nk, L = w.length, i, a, ch;
+    for (i = 1; i <= L; i++) {
+      if (i < L) cand[w.slice(0, i) + w.slice(i + 1)] = 1;                         // удаление
+      if (i + 1 < L) cand[w.slice(0, i) + w[i + 1] + w[i] + w.slice(i + 2)] = 1;   // перестановка
+      for (a = 0; a < ALPHA.length; a++) {
+        ch = ALPHA[a];
+        if (i < L) cand[w.slice(0, i) + ch + w.slice(i + 1)] = 1;                  // замена
+        cand[w.slice(0, i) + ch + w.slice(i)] = 1;                                 // вставка
+      }
+    }
+    var best = null, bestRank = Infinity;
+    for (var k in cand) {
+      if (k === nk || k.length < 3 || !full.has(k)) continue;
+      if (used && used.has(k)) continue;
+      var rank = (k in freqPos) ? freqPos[k] : (1e6 + Math.abs(k.length - L));
+      if (rank < bestRank) { bestRank = rank; best = k; }
+    }
+    return best ? { key: best, display: hyphMap[best] || best } : null;
+  }
 
   // Есть ли ещё неиспользованные слова на букву L (для детекта тупика).
   function hasWordsOn(L, usedFirstCount) {
@@ -84,6 +113,8 @@
     hasName: hasName,
     hasGeo: hasGeo,
     hasProper: hasProper,
+    display: display,
+    correct: correct,
     hasWordsOn: hasWordsOn,
     pickHint: pickHint,
     get ready() { return ready; },

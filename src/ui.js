@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '8';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '9';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -252,6 +252,7 @@
       hasOther: function (nk) { return dictReady && Dict.hasOther(nk); },
       isProper: function (nk) { return dictReady && Dict.hasProper(nk); },
       suggest: function (nk) { return dictReady ? Morph.suggest(nk, function (c) { return Dict.has(c) || CUSTOM.has(c); }) : null; },
+      correct: function (nk) { return dictReady ? Dict.correct(nk, G.used) : null; },
       rootKey: Morph.rootKey,
       cfg: { strictRoots: CFG.strictRoots, skipJ: CFG.skipJ }
     };
@@ -356,18 +357,53 @@
   };
   function moveMsg(res) { return (CFG.kids && KID[res.reason]) ? KID[res.reason](res) : res.message; }
 
+  // Диф двух нормализованных слов (расстояние 1): индексы изменённых/вставленных букв в b.
+  function diffIndices(a, b) {
+    var res = {};
+    if (a.length === b.length) { for (var i = 0; i < b.length; i++) if (a[i] !== b[i]) res[i] = true; }
+    else if (b.length === a.length + 1) { var j = 0; while (j < a.length && a[j] === b[j]) j++; res[j] = true; }
+    return res; // при удалении (b короче) подсвечивать нечего
+  }
+  // Дефисное написание исправления с зелёной подсветкой изменённых букв (кроме первой).
+  function fixHighlight(inputNorm, correctNorm, display) {
+    var hl = diffIndices(inputNorm, correctNorm), out = '', ni = 0;
+    for (var i = 0; i < display.length; i++) {
+      var ch = display[i];
+      if (ch === '-') { out += '-'; continue; }
+      out += (hl[ni] && ni > 0) ? '<span class="cg">' + esc(ch) + '</span>' : esc(ch);
+      ni++;
+    }
+    return out;
+  }
+  function applyFix() {
+    if (!G || paused || !G.pending || G.pending.reason !== 'typo') return;
+    $('word').value = G.pending.suggestion;
+    $('fixBtn').classList.remove('on');
+    submitWord();
+  }
+
   function submitWord(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (!G || paused) return;
     var res = Rules.checkMove($('word').value, state());
     if (!res.ok) {
+      $('fixBtn').classList.remove('on');
+      if (res.reason === 'typo') {  // похоже на опечатку — предложить исправление
+        $('msg').innerHTML = 'Может, «' + fixHighlight(res.key, res.correctKey, res.suggestion) + '»?';
+        $('msg').className = 'msg';
+        G.pending = res;
+        $('fixBtn').classList.add('on');
+        $('overrideBtn').classList.add('on');
+        buzz('warn');
+        return;
+      }
       setMsg(moveMsg(res));
       G.pending = res.overridable ? res : null;
       $('overrideBtn').classList.toggle('on', !!res.overridable);
       buzz(res.overridable ? 'warn' : 'bad');  // мягкий намёк, не «приговор»
       return;
     }
-    G.pending = null; $('overrideBtn').classList.remove('on');
+    G.pending = null; $('overrideBtn').classList.remove('on'); $('fixBtn').classList.remove('on');
     buzz('ok');
     accept(res, false);
   }
@@ -375,10 +411,10 @@
   function override() {
     if (!G || paused || !G.pending) return;
     var res = G.pending;
-    if (res.reason === 'unknown') { CUSTOM.add(res.key); saveCustom(); }
+    if (res.reason === 'unknown' || res.reason === 'typo') { CUSTOM.add(res.key); saveCustom(); }
     // для «настоящего» хода нужен корректный root/letter
     res.root = Morph.rootKey(res.key);
-    G.pending = null; $('overrideBtn').classList.remove('on');
+    G.pending = null; $('overrideBtn').classList.remove('on'); $('fixBtn').classList.remove('on');
     buzz('ok');
     accept(res, true);
   }
@@ -576,7 +612,7 @@
     ev.el = el;
   }
 
-  function setMsg(t, good) { $('msg').textContent = t || ''; $('msg').className = 'msg' + (good ? ' good' : ''); if (!t) $('overrideBtn').classList.remove('on'); }
+  function setMsg(t, good) { $('msg').textContent = t || ''; $('msg').className = 'msg' + (good ? ' good' : ''); if (!t) { $('overrideBtn').classList.remove('on'); $('fixBtn').classList.remove('on'); } }
   function focusInput() { try { $('word').focus(); } catch (e) {} }
 
   /* ============ ИТОГИ ============ */
@@ -877,8 +913,9 @@
     $('kidsBtn').addEventListener('click', function () { applyKids(true); renderSetup(); saveCfg(); newGame(); });
     $('send').addEventListener('click', submitWord);
     $('word').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); submitWord(); } });
-    $('word').addEventListener('input', function () { if ($('msg').textContent && !G.pending) setMsg(''); });
+    $('word').addEventListener('input', function () { if ($('msg').textContent) { setMsg(''); if (G) G.pending = null; } });
     $('overrideBtn').addEventListener('click', override);
+    $('fixBtn').addEventListener('click', applyFix);
     $('passBtn').addEventListener('click', pass);
     $('hintBtn').addEventListener('click', hint);
     $('swapBtn').addEventListener('click', swap);

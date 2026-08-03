@@ -95,6 +95,13 @@
         return r;
       }
       if (looksLikeVerb(nk) || looksLikeAdverb(nk)) return fail('wrong_pos', MSG.wrong_pos, false);
+      // похоже на опечатку? предложить исправление (первая буква не меняется)
+      var fix = state.correct ? state.correct(nk) : null;
+      if (fix && fix.key !== nk) {
+        var rf = fail('typo', '', true);
+        rf.suggestion = fix.display; rf.correctKey = fix.key;
+        return rf;
+      }
       return fail('unknown', MSG.unknown, true); // единственный выход в ручной зачёт по «не знаю»
     }
 
