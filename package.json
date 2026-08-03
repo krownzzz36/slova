@@ -1,7 +1,7 @@
 {
   "name": "slova",
   "version": "1.0.0",
-  "description": "Telegram Mini App «Слова» — игра в слова с настоящей проверкой по словарю",
+  "description": "Слова — тебе на А. Telegram Mini App: игра в слова с настоящей проверкой по словарю",
   "private": true,
   "scripts": {
     "test": "node --test",

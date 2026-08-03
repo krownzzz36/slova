@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Слова</title>
+<title>Слова — тебе на А</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root{
@@ -40,7 +40,8 @@
 
   /* ---------- старт ---------- */
   .logo{text-align:center; padding:18px 0 4px}
-  .logo h1{font-size:38px; margin:0; letter-spacing:-1px; font-weight:800}
+  .logo h1{font-size:34px; margin:0; letter-spacing:-1px; font-weight:800; line-height:1.05}
+  .logo h1 span{color:var(--accent)}
   .logo p{color:var(--muted); margin:6px 0 0; font-size:14px; line-height:1.4}
   .prow{display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--line);
         border-radius:16px; padding:12px 14px; box-shadow:var(--shadow); margin-bottom:8px}
@@ -192,7 +193,7 @@
   <div class="wrap">
     <div class="scroll">
       <div class="logo">
-        <h1>Слова</h1>
+        <h1>Слова <span>— тебе на А</span></h1>
         <p>Арбуз → Зима → Анчоус</p>
       </div>
 
@@ -364,11 +365,11 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=4" defer></script>
-<script src="src/morph.js?v=4" defer></script>
-<script src="src/dict.js?v=4" defer></script>
-<script src="src/stats.js?v=4" defer></script>
-<script src="src/storage.js?v=4" defer></script>
-<script src="src/ui.js?v=4" defer></script>
+<script src="src/rules.js?v=5" defer></script>
+<script src="src/morph.js?v=5" defer></script>
+<script src="src/dict.js?v=5" defer></script>
+<script src="src/stats.js?v=5" defer></script>
+<script src="src/storage.js?v=5" defer></script>
+<script src="src/ui.js?v=5" defer></script>
 </body>
 </html>
