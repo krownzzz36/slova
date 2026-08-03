@@ -249,11 +249,21 @@
 </style>
 <!-- ═══════════ СКИН «ЖИВАЯ ЛИТЕРА» v3 — редакторская сдержанность ═══════════ -->
 <style>
+  /* самохостинг: Playfair Display (display) + PT Serif (текст), кириллица+латиница */
+  @font-face{font-family:'PT Serif';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/ptserif-400-cyrillic.woff2') format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+  @font-face{font-family:'PT Serif';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/ptserif-400-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2122,U+2191,U+2193,U+2212,U+2215}
+  @font-face{font-family:'PT Serif';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/ptserif-700-cyrillic.woff2') format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+  @font-face{font-family:'PT Serif';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/ptserif-700-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2122,U+2191,U+2193,U+2212,U+2215}
+  @font-face{font-family:'Playfair Display';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/playfairdisplay-700-cyrillic.woff2') format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+  @font-face{font-family:'Playfair Display';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/playfairdisplay-700-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2122,U+2191,U+2193,U+2212,U+2215}
+  @font-face{font-family:'Playfair Display';font-style:normal;font-weight:800;font-display:swap;src:url('fonts/playfairdisplay-800-cyrillic.woff2') format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+  @font-face{font-family:'Playfair Display';font-style:normal;font-weight:800;font-display:swap;src:url('fonts/playfairdisplay-800-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2122,U+2191,U+2193,U+2212,U+2215}
   :root{
     --bg:#EFE1C4; --card:#F8EEDA; --text:#22190F; --muted:#7C6A52;
     --line:#E2CFA9; --accent:#B23122; --ok:#5E6C2C; --warn:#A9760F;
     --glow:rgba(120,70,20,.16);
-    --serif:Georgia,"Times New Roman","Iowan Old Style",serif;
+    --serif:'PT Serif',Georgia,"Times New Roman",serif;
+    --display:'Playfair Display',Georgia,"Times New Roman",serif;
     --shadow:0 1px 2px rgba(60,40,15,.05), 0 12px 30px -22px rgba(60,40,15,.4);
   }
   @media (prefers-color-scheme: dark){
@@ -274,7 +284,9 @@
   body{
     background:radial-gradient(140% 60% at 50% -10%, color-mix(in srgb, var(--warn) 8%, transparent), transparent 55%), var(--bg);
     background-attachment:fixed; -webkit-font-smoothing:antialiased;
+    font-family:var(--serif);
   }
+  input, button, textarea{font-family:var(--serif)}
   body::after{
     content:""; position:fixed; inset:0; z-index:9999; pointer-events:none; opacity:.035; mix-blend-mode:soft-light;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -283,10 +295,10 @@
 
   /* один серифный голос: заголовки, слова и ЦИФРЫ */
   .logo{padding:30px 0 8px}
-  .logo h1{font-family:var(--serif); font-size:clamp(30px, 8vw, 37px); font-weight:700; letter-spacing:-1px; line-height:1.05; text-wrap:balance}
+  .logo h1{font-family:var(--display); font-size:clamp(31px, 8.2vw, 39px); font-weight:800; letter-spacing:-.3px; line-height:1.06; text-wrap:balance}
   .logo h1 span{color:inherit}
   .logo p{font-family:var(--serif); font-style:italic; color:var(--muted); font-size:15px; letter-spacing:.2px; margin-top:10px}
-  #over h2, .ob-title, .pause-title, #custom h2, #history h2, #ref h2{font-family:var(--serif); font-weight:700; letter-spacing:-.4px}
+  #over h2, .ob-title, .pause-title, #custom h2, #history h2, #ref h2{font-family:var(--display); font-weight:700; letter-spacing:-.2px}
   .sect{color:var(--muted); letter-spacing:.18em; font-size:11px; font-weight:700}
 
   /* поверхности: плоские, тонкая линия, тихая тень */
@@ -314,14 +326,14 @@
   }
   .turn{font-size:15px}
   .letter{
-    font-family:var(--serif); font-weight:700;
-    font-size:clamp(96px, 28vw, 148px); line-height:.9; letter-spacing:-5px; margin:12px 0 8px;
+    font-family:var(--display); font-weight:800;
+    font-size:clamp(104px, 30vw, 168px); line-height:.9; letter-spacing:-1px; margin:10px 0 6px;
     color:var(--accent); text-shadow:0 14px 44px var(--glow);
     transform-origin:center; backface-visibility:hidden; will-change:transform, text-shadow;
   }
-  .letter.small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    font-size:30px; letter-spacing:0; color:var(--text); text-shadow:none; transform:none}
-  .clock{font-family:var(--serif); font-size:30px; font-weight:700; letter-spacing:0}
+  .letter.small{font-family:var(--serif); font-weight:700;
+    font-size:29px; letter-spacing:0; color:var(--text); text-shadow:none; transform:none}
+  .clock{font-family:var(--display); font-size:31px; font-weight:700; letter-spacing:0}
   .series{background:transparent; color:var(--warn); font-weight:700; top:14px; right:14px; padding:0}
   .bar{height:2px; background:var(--accent)}
   .sc .v{font-family:var(--serif)}
@@ -616,6 +628,19 @@
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>
 (function () {
+  // текст кнопки старта по реальному числу игроков (в HTML он статичный)
+  var startBtn = document.getElementById('startBtn');
+  var plist = document.getElementById('plist');
+  if (startBtn && plist) {
+    var W = {1:'одному', 2:'вдвоём', 3:'втроём', 4:'вчетвером', 5:'впятером', 6:'вшестером', 7:'всемером', 8:'ввосьмером'};
+    var updStart = function () {
+      var n = plist.querySelectorAll('.prow').length || 1;
+      startBtn.textContent = W[n] ? 'Играть ' + W[n] : 'Играть · ' + n + ' игроков';
+    };
+    updStart();
+    new MutationObserver(updStart).observe(plist, { childList: true, subtree: true });
+  }
+
   function haptic() {
     try {
       var h = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback;
