@@ -16,10 +16,11 @@
   var LIVES = [{ v: 0, t: 'выкл' }, { v: 3, t: '3 ♥' }, { v: 5, t: '5 ♥' }];
 
   var CFG = { names: ['Игрок 1', 'Игрок 2'], limit: 0, memory: false, strictRoots: true,
-    skipJ: true, hintLimit: 3, proper: false, anyPos: false, lives: 0, kids: false, tasks: false, speak: false };
+    skipJ: true, hintLimit: 3, proper: false, anyPos: false, lives: 0, kids: false, tasks: false, speak: false, advOpen: false };
   var MEM = new Set();                 // копилка (нормализованные ключи)
   var CUSTOM = new Set();              // свои слова (проходят проверку всегда)
   var HISTORY = [];                    // сыгранные партии (новые сверху)
+  var DAILY = { last: null, streak: 0 };  // серия дней (день-стрик)
   var G = null;
   var dictReady = false, dictDegraded = false;
   var timerId = null, turnStart = 0, warned = false, paused = false, lastTurn = -1;
@@ -57,12 +58,41 @@
 
   /* ============ ХРАНИЛИЩЕ ============ */
   function loadAll(cb) {
-    var pending = 4;
+    var pending = 5;
     function done() { if (--pending === 0) cb(); }
     Storage.get('cfg', function (v) { if (v && typeof v === 'object') { for (var k in CFG) if (k in v) CFG[k] = v[k]; if (CFG.hintLimit === null) CFG.hintLimit = Infinity; } done(); });
     Storage.getList('memory', function (arr) { arr.forEach(function (w) { MEM.add(w); }); done(); });
     Storage.getList('custom', function (arr) { arr.forEach(function (w) { CUSTOM.add(w); }); done(); });
     Storage.getList('history', function (arr) { HISTORY = (arr || []).filter(function (g) { return g && g.t; }); done(); });
+    Storage.get('daily', function (v) { if (v && typeof v === 'object') DAILY = { last: v.last || null, streak: v.streak || 0 }; done(); });
+  }
+
+  /* ---------- дневной крючок (буква дня + серия дней), офлайн, детерминированно ---------- */
+  var DAY_POOL = 'абвгдзиклмнопрстч';
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dayStr(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function todayStr() { return dayStr(new Date()); }
+  function letterOfDay() {
+    var s = todayStr(), h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return DAY_POOL[h % DAY_POOL.length];
+  }
+  function bumpStreak() {  // вызывать при завершении непустой партии
+    var t = todayStr();
+    if (DAILY.last === t) return;
+    var y = new Date(); y.setDate(y.getDate() - 1);
+    DAILY.streak = (DAILY.last === dayStr(y)) ? (DAILY.streak || 0) + 1 : 1;
+    DAILY.last = t;
+    Storage.set('daily', DAILY);
+  }
+  function renderDaily() {
+    var L = letterOfDay().toUpperCase();
+    var done = DAILY.last === todayStr();
+    var streak = DAILY.streak || 0;
+    $('dailyPlate').innerHTML =
+      '<span class="dl">Буква дня<b>' + L + '</b></span>' +
+      '<span class="dr">' + (done ? 'сегодня сыграно ✓' : 'сыграй сегодня') +
+      (streak > 1 ? '<br>🔥 ' + streak + ' ' + plural(streak, 'день', 'дня', 'дней') + ' подряд' : '') + '</span>';
   }
   function saveCfg() { var c = {}; for (var k in CFG) c[k] = (CFG[k] === Infinity ? null : CFG[k]); Storage.set('cfg', c); }
   function saveMem() { Storage.setList('memory', Array.from(MEM)); }
@@ -94,7 +124,7 @@
   }
   function degrade() { dictDegraded = true; dictReady = false; status('офлайн — мягкая проверка слов'); }
   function status(html) { $('dictStatus').innerHTML = html; }
-  function enableStart() { $('startBtn').disabled = false; }
+  function enableStart() { $('startBtn').disabled = false; $('kidsBtn').disabled = false; }
 
   /* ============ ЭКРАН СТАРТА ============ */
   function renderSetup() {
@@ -125,9 +155,12 @@
     $('tasksSw').classList.toggle('on', CFG.tasks);
     $('speakSw').classList.toggle('on', CFG.speak);
     $('memSw').classList.toggle('on', CFG.memory);
+    $('advBody').classList.toggle('on', CFG.advOpen);
+    $('advToggle').classList.toggle('open', CFG.advOpen);
     memInfo();
     $('customCount').textContent = CUSTOM.size ? ('  ' + CUSTOM.size) : '';
     $('historyCount').textContent = HISTORY.length ? ('  ' + HISTORY.length) : '';
+    renderDaily();
   }
 
   // Детский режим — пресет прощающих настроек (ТЗ: чтобы ребёнок разобрался).
@@ -553,6 +586,7 @@
     clearResume();
     if (CFG.memory) saveMem(); saveCustom();
     if (!totalWords) { renderSetup(); show('setup'); return; } // пустой раунд — на старт (ТЗ 4.6)
+    bumpStreak();  // засчитать день в серию (Задача 6)
 
     var st = Stats.compute(G.players, G.log);
     var best = st.best, maxW = st.maxWords;
@@ -572,6 +606,7 @@
       $('overTitle').textContent = best.name + ' — быстрее всех!';
       $('overSub').textContent = 'в среднем ' + fmtSec(best.avg) + ' с на слово';
     }
+    if (DAILY.streak > 1) $('overSub').textContent += ' · 🔥 ' + DAILY.streak + ' дн. подряд';
 
     $('final').innerHTML = st.rank.map(function (p) {
       var win = p.i === winnerI;
@@ -805,7 +840,9 @@
 
     $('obClose').addEventListener('click', closeOnboard);
     $('howToBtn').addEventListener('click', showOnboard);
+    $('advToggle').addEventListener('click', function () { CFG.advOpen = !CFG.advOpen; renderSetup(); saveCfg(); });
     $('startBtn').addEventListener('click', function () { newGame(); });
+    $('kidsBtn').addEventListener('click', function () { applyKids(true); renderSetup(); saveCfg(); newGame(); });
     $('send').addEventListener('click', submitWord);
     $('word').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); submitWord(); } });
     $('word').addEventListener('input', function () { if ($('msg').textContent && !G.pending) setMsg(''); });
@@ -843,7 +880,7 @@
     }
     if (tg) { try { tg.ready(); tg.expand(); applyTheme(); tg.onEvent && tg.onEvent('themeChanged', applyTheme); } catch (e) {} }
     bind();
-    $('startBtn').disabled = true;
+    $('startBtn').disabled = true; $('kidsBtn').disabled = true;
     loadAll(function () {
       renderSetup(); checkResume();
       Storage.get('onboarded', function (v) { if (!v) showOnboard(); });  // первый запуск (Задача 1)

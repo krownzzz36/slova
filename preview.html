@@ -6,14 +6,19 @@
 <title>Слова — тебе на А</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
+  /* «Живая литера» — хохлома: вишня, золото, тёплый чёрный на медовом фоне */
   :root{
-    --bg:#f6f3ee; --card:#ffffff; --text:#1c1a17; --muted:#8a8378;
-    --line:#e6e0d6; --accent:#e8663c; --ok:#4a9d5f; --warn:#d4a017;
-    --shadow:0 2px 10px rgba(28,26,23,.06);
+    --bg:#F4EAD5; --card:#FCF4E4; --text:#241C17; --muted:#6E5F4E;
+    --line:#E4D4B5; --accent:#C1362B; --ok:#66722F; --warn:#B07E12;
+    --glow:rgba(176,126,18,.26);
+    --serif:Georgia,"Times New Roman","Iowan Old Style",serif;
+    --shadow:0 2px 16px rgba(90,60,25,.09);
   }
   @media (prefers-color-scheme: dark){
-    :root{ --bg:#17171a; --card:#212126; --text:#f2efe9; --muted:#8e8a84;
-           --line:#32323a; --shadow:0 2px 10px rgba(0,0,0,.3); }
+    :root{ --bg:#17120E; --card:#221A12; --text:#F2E6D2; --muted:#B29C80;
+           --line:#3A2C1E; --accent:#E9584A; --ok:#9FAD5D; --warn:#E6B443;
+           --glow:rgba(230,180,67,.34);
+           --shadow:0 6px 24px rgba(0,0,0,.5); }
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
@@ -40,7 +45,7 @@
 
   /* ---------- старт ---------- */
   .logo{text-align:center; padding:18px 0 4px}
-  .logo h1{font-size:34px; margin:0; letter-spacing:-1px; font-weight:800; line-height:1.05}
+  .logo h1{font-family:var(--serif); font-size:36px; margin:0; letter-spacing:-1px; font-weight:700; line-height:1.05}
   .logo h1 span{color:var(--accent)}
   .logo p{color:var(--muted); margin:6px 0 0; font-size:14px; line-height:1.4}
   .prow{display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--line);
@@ -66,18 +71,8 @@
           border-radius:16px; padding:14px; box-shadow:var(--shadow); margin-bottom:8px; cursor:pointer; width:100%; font-family:inherit; text-align:left; color:var(--text)}
   .rowbtn b{flex:1; font-size:15px; font-weight:600}
   .rowbtn .arr{color:var(--muted); font-size:18px}
-  .adv-h{display:flex; align-items:center; gap:10px; width:100%; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow:var(--shadow); cursor:pointer; font-family:inherit; color:var(--text); font-weight:700; font-size:15px; margin:14px 0 8px; min-height:52px}
-  .adv-h span:first-child{flex:1; text-align:left}
-  .adv-h .arr{color:var(--muted); font-size:18px; transition:transform .2s}
-  .adv-h.open .arr{transform:rotate(90deg)}
-  .adv{display:none}
-  .adv.on{display:block}
   .dictline{font-size:12.5px; color:var(--muted); text-align:center; padding:10px 0 2px}
   .dictline b{color:var(--text); font-weight:700}
-  .daily{display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:11px 14px; box-shadow:var(--shadow); margin:6px 0 2px; font-size:13.5px}
-  .daily .dl{flex:1; color:var(--muted)}
-  .daily .dl b{color:var(--accent); font-size:17px; font-weight:800; margin-left:3px}
-  .daily .dr{color:var(--muted); font-size:12.5px; text-align:right}
   .resume{background:var(--card); border:1px solid var(--accent); border-radius:16px; padding:14px; box-shadow:var(--shadow); margin:6px 0 2px; display:none}
   .resume.on{display:block}
   .resume p{margin:0 0 10px; font-size:14.5px; font-weight:600}
@@ -97,8 +92,10 @@
   .sc .t{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
   .iconbtn{border:0;background:transparent;color:var(--muted);font-size:20px;padding:8px 4px;cursor:pointer;line-height:1;flex:none}
 
-  .stage{background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow);
-         padding:14px 16px 16px; text-align:center; margin-bottom:10px; position:relative; overflow:hidden}
+  .stage{background:
+           radial-gradient(120% 90% at 50% 20%, color-mix(in srgb, var(--warn) 12%, transparent), transparent 62%),
+           var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow);
+         padding:14px 16px 18px; text-align:center; margin-bottom:10px; position:relative; overflow:hidden; perspective:760px}
   .bar{position:absolute;left:0;top:0;height:3px;background:var(--accent);width:0%;transition:width .1s linear}
   .turn{font-size:16px; color:var(--muted); display:flex; align-items:center; justify-content:center; gap:8px}
   .turn b{color:var(--text)}
@@ -107,8 +104,9 @@
   .turn.pop{animation:turnpop .32s ease}
   .series{position:absolute; right:12px; top:10px; font-size:12px; font-weight:700; color:var(--warn); opacity:0; transition:opacity .2s}
   .series.on{opacity:1}
-  .letter{font-size:72px; font-weight:800; line-height:1; letter-spacing:-2px; margin:2px 0 2px; color:var(--accent)}
-  .letter.small{font-size:30px; letter-spacing:0; color:var(--text); font-weight:700; padding:14px 0 8px}
+  .letter{font-family:var(--serif); font-size:94px; font-weight:700; line-height:1; letter-spacing:-3px; margin:6px 0 4px; color:var(--accent);
+          text-shadow:0 16px 40px var(--glow); transform-origin:center; backface-visibility:hidden; will-change:transform,text-shadow}
+  .letter.small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; font-size:30px; letter-spacing:0; color:var(--text); font-weight:700; padding:14px 0 8px; text-shadow:none; transform:none}
   .letter.dead{color:var(--warn)}
   .clock{font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.5px}
   .prev{font-size:13px; color:var(--muted); min-height:18px; margin-top:2px}
@@ -124,7 +122,7 @@
   .pause-ov{position:fixed; inset:0; background:rgba(0,0,0,.72); display:none; align-items:center; justify-content:center; z-index:50; padding:24px}
   .pause-ov.on{display:flex}
   .pause-card{background:var(--card); border:1px solid var(--line); border-radius:22px; padding:26px 20px; width:100%; max-width:340px; text-align:center; box-shadow:var(--shadow)}
-  .pause-title{font-size:30px; font-weight:800; margin-bottom:4px}
+  .pause-title{font-family:var(--serif); font-size:30px; font-weight:700; margin-bottom:4px}
   .pause-sub{font-size:13px; color:var(--muted); margin-bottom:18px}
   .pause-card .btn{margin-top:8px}
 
@@ -149,7 +147,7 @@
          border:1px solid var(--line); border-radius:13px; margin-bottom:5px}
   .hitem.pass{background:transparent; border-style:dashed}
   .hitem .who{font-size:11.5px; flex:none}
-  .hitem .w{font-size:16.5px; font-weight:600; text-transform:capitalize; flex:1; min-width:0}
+  .hitem .w{font-family:var(--serif); font-size:17px; font-weight:600; text-transform:capitalize; flex:1; min-width:0}
   .hitem .w .hl{color:var(--accent)}
   .hitem .badge{font-size:12px; color:var(--muted); flex:none}
   .hitem .ms{font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; flex:none}
@@ -160,7 +158,7 @@
 
   /* ---------- итоги ---------- */
   #over .wrap{padding-bottom:16px}
-  #over h2{font-size:28px; margin:16px 0 2px; font-weight:800; text-align:center}
+  #over h2{font-family:var(--serif); font-size:30px; margin:16px 0 2px; font-weight:700; text-align:center}
   #over .sub{text-align:center; color:var(--muted); font-size:14px; margin-bottom:14px}
   .frow{display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--line);
         border-radius:16px; padding:13px 15px; box-shadow:var(--shadow); margin-bottom:8px}
@@ -243,8 +241,6 @@
       </div>
       <button class="ob-link" id="howToBtn">Как играть?</button>
 
-      <div class="daily" id="dailyPlate"></div>
-
       <div class="resume" id="resumeBanner">
         <p id="resumeText">Продолжить прерванный раунд?</p>
         <div class="rb">
@@ -253,16 +249,14 @@
         </div>
       </div>
 
-      <div class="sect">Игроки <span style="text-transform:none;letter-spacing:0;font-weight:600">· 1 = игра сам с собой</span></div>
-      <div id="plist"></div>
-      <button class="addp" id="addP">+ добавить игрока</button>
-
-      <button class="adv-h" id="advToggle"><span>⚙ Настройки игры</span><span class="arr">›</span></button>
-      <div class="adv" id="advBody">
-      <div class="toggle" style="border-color:var(--accent); margin-top:4px">
+      <div class="toggle" style="border-color:var(--accent)">
         <div class="tt"><b>🧸 Детский режим</b><span>крупно, без таймера, всё прощает, подсказки без лимита</span></div>
         <div class="sw" id="kidsSw"><i></i></div>
       </div>
+
+      <div class="sect">Игроки <span style="text-transform:none;letter-spacing:0;font-weight:600">· 1 = игра сам с собой</span></div>
+      <div id="plist"></div>
+      <button class="addp" id="addP">+ добавить игрока</button>
 
       <div class="sect">Сколько думать на ход</div>
       <div class="chips" id="limits"></div>
@@ -310,8 +304,6 @@
         <div class="sw" id="memSw"><i></i></div>
       </div>
       <button class="btn ghost" id="clearMem" style="margin-top:2px">Очистить копилку</button>
-      </div><!-- /advBody -->
-
       <button class="rowbtn" id="customBtn" style="margin-top:8px">
         <b>Свои слова</b><span class="mini" id="customCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
       </button>
@@ -322,9 +314,8 @@
       <div class="dictline" id="dictStatus">словарь загружается…</div>
       <div style="height:8px"></div>
     </div>
-    <div style="padding:6px 0 14px; display:flex; flex-direction:column; gap:8px">
-      <button class="btn" id="startBtn">Играть вдвоём</button>
-      <button class="btn soft accent" id="kidsBtn">🧸 Для малыша</button>
+    <div style="padding:6px 0 14px">
+      <button class="btn" id="startBtn">Играть</button>
     </div>
   </div>
 </section>
@@ -464,5 +455,60 @@
 <script src="src/stats.js?v=7" defer></script>
 <script src="src/storage.js?v=7" defer></script>
 <script src="src/ui.js?v=7" defer></script>
+
+<!-- «Живая литера»: split-flap флип буквы. Чисто визуальный слой над игрой,
+     логику из src/ui.js не трогает — просто наблюдает за #letter. -->
+<script>
+(function () {
+  var el = document.getElementById('letter');
+  if (!el) return;
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) return;
+  var raf = window.requestAnimationFrame.bind(window);
+
+  function Spring(response, bounce) {
+    this.zeta = Math.max(0.05, 1 - bounce);
+    this.omega = (2 * Math.PI) / response;
+    this.x = 0; this.v = 0; this.target = 1;
+  }
+  Spring.prototype.step = function (dt) {
+    dt = Math.min(dt, 1 / 30);
+    var a = -this.omega * this.omega * (this.x - this.target) - 2 * this.zeta * this.omega * this.v;
+    this.v += a * dt; this.x += this.v * dt; return this.x;
+  };
+  Spring.prototype.settled = function () {
+    return Math.abs(this.x - this.target) < 0.001 && Math.abs(this.v) < 0.02;
+  };
+
+  var sp = null, last = 0, ticking = false;
+  function frame(t) {
+    var dt = last ? (t - last) / 1000 : 1 / 60; last = t;
+    var p = sp.step(dt);
+    var rot = (1 - p) * -78, ty = (1 - p) * 16, sc = 0.86 + p * 0.14;
+    el.style.transform = 'translateY(' + ty.toFixed(2) + 'px) scale(' + sc.toFixed(3) + ') rotateX(' + rot.toFixed(2) + 'deg)';
+    var g = Math.min(1, Math.abs(sp.v) * 0.11);
+    el.style.textShadow = '0 ' + (16 + g * 30).toFixed(0) + 'px ' + (40 + g * 55).toFixed(0) + 'px var(--glow)' +
+      (g > 0.12 ? ', 0 0 ' + (g * 42).toFixed(0) + 'px var(--glow)' : '');
+    if (!sp.settled()) { raf(frame); }
+    else { el.style.transform = 'translateY(0) scale(1) rotateX(0)'; el.style.textShadow = '0 16px 40px var(--glow)'; ticking = false; last = 0; }
+  }
+  function flip() {
+    var carry = sp ? sp.v : 0;
+    sp = new Spring(0.46, 0.24); sp.x = 0; sp.v = Math.min(carry, 6);
+    if (!ticking) { ticking = true; last = 0; raf(frame); }
+  }
+
+  // одиночная кириллическая буква (не «·», не слово в режиме .small)
+  var single = /^[А-ЯЁ]$/i;
+  var prev = (el.textContent || '').trim();
+  new MutationObserver(function () {
+    if (document.hidden) return;
+    if (el.classList.contains('small')) { el.style.transform = 'none'; prev = ''; return; }
+    var now = (el.textContent || '').trim();
+    if (now && now !== prev && single.test(now)) { flip(); }
+    prev = now;
+  }).observe(el, { childList: true, characterData: true, subtree: true });
+})();
+</script>
 </body>
 </html>
