@@ -230,92 +230,144 @@
   .gitem .gb .pdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
   .gitem .gtag{display:inline-block; font-size:11px; color:var(--muted); border:1px solid var(--line); border-radius:8px; padding:1px 7px; margin:0 4px 4px 0}
 </style>
-<!-- ═══════════ СКИН «ЖИВАЯ ЛИТЕРА» — хохлома, поверх базовых стилей ═══════════ -->
+<!-- ═══════════ СКИН «ЖИВАЯ ЛИТЕРА» — хохлома, арт-дирекшн поверх базовых стилей ═══════════ -->
 <style>
   :root{
-    --bg:#F1E5CD; --card:#FBF3E2; --text:#231A12; --muted:#7A6A55;
-    --line:#E4D3B2; --accent:#BE3223; --ok:#5F6E2E; --warn:#AE7A11;
-    --glow:rgba(190,140,30,.26);
+    --bg:#F0E3C9; --card:#FBF3E1; --card-2:#F6EBD4; --text:#221910; --muted:#786751;
+    --line:#E4D2B0; --accent:#BE3223; --accent-2:#D5482F; --ok:#5F6E2E; --warn:#AC7810;
+    --glow:rgba(188,138,28,.30);
     --serif:Georgia,"Times New Roman","Iowan Old Style",serif;
     --shadow:0 2px 16px rgba(120,80,30,.10);
-    --shadow-lg:0 22px 50px -30px rgba(90,55,20,.5);
+    --shadow-lg:0 26px 60px -34px rgba(90,55,20,.55);
+    --hair:inset 0 1px 0 rgba(255,255,255,.55);
   }
   @media (prefers-color-scheme: dark){
     :root{
-      --bg:#140F0B; --card:#221A12; --text:#F3E7D3; --muted:#AF9877;
-      --line:#38291C; --accent:#EC5C4C; --ok:#A6B265; --warn:#EAB645;
-      --glow:rgba(234,182,69,.36);
-      --shadow:0 4px 20px rgba(0,0,0,.45);
-      --shadow-lg:0 26px 60px -28px rgba(0,0,0,.72);
+      --bg:#120D09; --card:#211811; --card-2:#2A2015; --text:#F4E8D4; --muted:#B0997B;
+      --line:#39291B; --accent:#EE5B49; --accent-2:#F0705E; --ok:#A9B466; --warn:#ECB846;
+      --glow:rgba(236,184,70,.42);
+      --shadow:0 4px 20px rgba(0,0,0,.5);
+      --shadow-lg:0 30px 66px -30px rgba(0,0,0,.8);
+      --hair:inset 0 1px 0 rgba(255,255,255,.06);
     }
   }
+
+  /* — прочь дефолтная (синяя) обводка фокуса; для клавиатуры — тёплое кольцо — */
+  *:focus{outline:none}
+  button:focus-visible, input:focus-visible, [tabindex]:focus-visible{
+    outline:none; box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent)}
+
+  /* — атмосфера: тёплое свечение + зерно плёнки — */
   body{
     background:
-      radial-gradient(125% 80% at 50% -8%, color-mix(in srgb, var(--warn) 10%, transparent), transparent 60%),
+      radial-gradient(120% 55% at 50% -8%, color-mix(in srgb, var(--warn) 13%, transparent), transparent 60%),
+      radial-gradient(80% 45% at 108% 104%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 62%),
+      radial-gradient(70% 40% at -8% 90%, color-mix(in srgb, var(--warn) 8%, transparent), transparent 60%),
       var(--bg);
+    background-attachment:fixed;
     -webkit-font-smoothing:antialiased;
   }
+  body::after{
+    content:""; position:fixed; inset:0; z-index:9999; pointer-events:none; opacity:.05;
+    mix-blend-mode:soft-light;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  @media (prefers-reduced-transparency: reduce){ body::after{display:none} }
 
   /* — голос «слов»: серифные заголовки — */
-  .logo h1{font-family:var(--serif); font-size:37px; font-weight:700; letter-spacing:-1.2px}
-  .logo p{color:var(--muted); letter-spacing:.2px}
-  #over h2, .ob-title, .pause-title, #custom h2, #history h2{font-family:var(--serif); font-weight:700}
-  .sect{color:var(--warn); letter-spacing:.14em}
+  .logo{position:relative; padding:26px 0 6px}
+  .logo h1{font-family:var(--serif); font-size:clamp(31px, 8.4vw, 38px); font-weight:700; letter-spacing:-1.2px; line-height:1.04; text-wrap:balance}
+  .logo p{color:var(--muted); letter-spacing:.3px; margin-top:8px}
+  #over h2, .ob-title, .pause-title, #custom h2, #history h2{font-family:var(--serif); font-weight:700; letter-spacing:-.5px}
+  .sect{color:var(--warn); letter-spacing:.16em; font-size:11.5px}
 
-  /* — кнопки с характером — */
-  .btn{
-    background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 90%, #fff 10%), var(--accent));
-    box-shadow:0 10px 22px -12px var(--accent), inset 0 1px 0 rgba(255,255,255,.16);
-    border-radius:18px; letter-spacing:.01em; transition:transform .13s cubic-bezier(.2,.8,.2,1);
+  /* — карточки: тёплый край + верхний блик — */
+  .toggle, .prow, .rowbtn, .adv-h, .daily, .resume, .sc, .stat, .frow, .dist, .pp, .gitem, .citem, .hitem, #mic, .chip{
+    border-radius:16px; box-shadow:var(--shadow), var(--hair);
   }
-  .btn:active:not(:disabled){transform:scale(.965)}
-  .btn.soft{background:var(--card); box-shadow:var(--shadow); border-radius:18px}
-  .btn.soft.accent{border-color:var(--accent); color:var(--accent)}
-  .btn.ghost{background:transparent; box-shadow:none}
-
-  /* — карточки чуть глубже — */
   .toggle, .prow, .rowbtn, .adv-h, .daily, .resume{border-radius:18px}
+
+  /* — кнопки с характером + глянец — */
+  .btn{
+    background:linear-gradient(177deg, var(--accent-2), var(--accent) 62%, color-mix(in srgb, var(--accent) 86%, #000 14%));
+    box-shadow:0 12px 26px -12px var(--accent), 0 2px 6px -2px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.22);
+    border-radius:18px; letter-spacing:.01em; font-weight:800;
+    position:relative; overflow:hidden; transition:transform .14s cubic-bezier(.2,.85,.25,1), box-shadow .2s ease;
+  }
+  .btn:not(.soft):not(.ghost)::before{
+    content:""; position:absolute; left:0; right:0; top:0; height:48%;
+    background:linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,0)); pointer-events:none;
+  }
+  .btn:active:not(:disabled){transform:scale(.96)}
+  .btn.soft{background:var(--card); color:var(--text); box-shadow:var(--shadow), var(--hair); border-radius:18px; font-weight:700}
+  .btn.soft.accent{border-color:var(--accent); color:var(--accent)}
+  .btn.ghost{background:transparent; box-shadow:none; overflow:visible}
+  .addp{border-radius:18px}
+  .addp:active, .rowbtn:active, .toggle:active, .adv-h:active, .chip:active{transform:scale(.99)}
+  .chip.on{box-shadow:0 0 0 1.5px var(--accent) inset, var(--shadow)}
+  .sw.on{background:var(--ok)}
 
   /* — СЦЕНА: буква-герой — */
   .stage{
-    border-radius:26px; padding:20px 18px 22px; perspective:760px;
+    border-radius:28px; padding:22px 18px 24px; perspective:820px; isolation:isolate;
+    border-color:color-mix(in srgb, var(--warn) 20%, var(--line));
     background:
-      radial-gradient(120% 78% at 50% 16%, color-mix(in srgb, var(--warn) 16%, transparent), transparent 62%),
+      radial-gradient(115% 72% at 50% 12%, color-mix(in srgb, var(--warn) 20%, transparent), transparent 60%),
+      radial-gradient(90% 80% at 50% 120%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 55%),
       var(--card);
-    box-shadow:var(--shadow-lg);
+    box-shadow:var(--shadow-lg), var(--hair);
   }
-  .turn{font-size:15px}
+  .sprig{position:absolute; pointer-events:none; z-index:0; opacity:.9}
+  .turn{font-size:15px; position:relative; z-index:1}
+  .turn .avatar{box-shadow:0 0 0 3px color-mix(in srgb, var(--warn) 26%, transparent)}
   .letter{
-    font-family:var(--serif); font-weight:700;
-    font-size:clamp(86px, 25vw, 128px); line-height:.94; letter-spacing:-4px; margin:8px 0 6px;
-    color:var(--accent); text-shadow:0 18px 46px var(--glow);
+    font-family:var(--serif); font-weight:700; position:relative; z-index:1;
+    font-size:clamp(94px, 27vw, 140px); line-height:.92; letter-spacing:-5px; margin:8px 0 6px;
+    color:var(--accent);
+    text-shadow:0 20px 50px var(--glow), 0 0 34px color-mix(in srgb, var(--glow) 60%, transparent);
     transform-origin:center; backface-visibility:hidden; will-change:transform, text-shadow;
   }
   .letter.small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     font-size:30px; letter-spacing:0; color:var(--text); text-shadow:none; transform:none}
-  .clock{font-size:27px; letter-spacing:-.5px}
-  .series{background:color-mix(in srgb, var(--warn) 16%, transparent); border-radius:999px; padding:3px 9px; top:12px; right:12px}
+  .clock{font-size:28px; letter-spacing:-.5px; position:relative; z-index:1}
+  .prev{position:relative; z-index:1}
+  .series{background:color-mix(in srgb, var(--warn) 18%, transparent); border-radius:999px; padding:3px 10px; top:12px; right:12px; z-index:1}
+  .bar{height:3px; background:linear-gradient(90deg, var(--warn), var(--accent)); z-index:2}
 
   /* — ввод — */
-  .form input{border-radius:18px; font-family:var(--serif); font-size:19px}
-  .form input:focus{border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)}
+  .form input{border-radius:18px; font-family:var(--serif); font-size:19px; box-shadow:var(--hair)}
+  .form input:focus{border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent)}
   .sq{border-radius:16px}
-  #send{background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 90%, #fff 10%), var(--accent));
-        box-shadow:0 8px 18px -10px var(--accent)}
+  #send{background:linear-gradient(177deg, var(--accent-2), var(--accent)); color:#fff;
+        box-shadow:0 10px 20px -10px var(--accent), inset 0 1px 0 rgba(255,255,255,.22)}
+  .override{border-radius:14px; font-weight:800}
 
   /* — цепочка слов: связующая буква как вишнёвая пилюля — */
-  .hitem{border-radius:15px}
+  .hitem{border-radius:14px}
   .hitem .w{font-family:var(--serif); font-size:17px}
-  .hitem .w .hl{color:var(--accent); background:color-mix(in srgb, var(--accent) 13%, transparent);
-                border-radius:6px; padding:0 5px; font-weight:800}
+  .hitem .w .hl{color:#fff; background:var(--accent); border-radius:7px; padding:1px 6px; font-weight:800;
+                box-shadow:0 4px 10px -4px var(--accent)}
 
-  /* — онбординг серифом — */
-  .ob-t{font-family:var(--serif); border-radius:16px}
-  .ob-title{font-size:27px}
+  /* — онбординг — */
+  .ob-ov{background:
+      radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--warn) 14%, transparent), transparent 60%),
+      var(--bg)}
+  .ob-title{font-size:28px; letter-spacing:-.5px; margin-bottom:22px}
+  .ob-t{font-family:var(--serif); border-radius:16px; box-shadow:var(--shadow), var(--hair); font-size:24px}
+  .ob-t b{color:var(--accent)}
+
+  /* — счёт активного игрока — */
+  .sc.active{box-shadow:0 0 0 2px var(--accent), 0 10px 24px -14px var(--accent)}
 
   /* — итоги — */
-  .frow.win{border-color:var(--ok)}
+  .frow.win{border-color:var(--ok); box-shadow:0 0 0 1px var(--ok), var(--shadow)}
   .drow .fill{background:linear-gradient(90deg, var(--warn), var(--accent))}
+
+  /* — вход экрана — */
+  @keyframes scrIn{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion: no-preference){
+    .screen.on > .wrap{animation:scrIn .5s cubic-bezier(.2,.8,.2,1)}
+  }
 </style>
 </head>
 <body>
@@ -553,9 +605,31 @@
 <script src="src/sharecard.js?v=8" defer></script>
 <script src="src/ui.js?v=8" defer></script>
 
-<!-- «Живая литера»: split-flap флип буквы. Чисто визуальный слой, наблюдает за #letter, логику не трогает. -->
+<!-- «Живая литера»: орнамент хохломы в сцене + split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>
 (function () {
+  // золотая веточка хохломы в углах сцены (как в концепте)
+  var stage = document.getElementById('stage');
+  if (stage && !stage.querySelector('.sprig')) {
+    var SPRIG = '<svg viewBox="0 0 86 86" width="64" height="64" aria-hidden="true">' +
+      '<path d="M14 72 C 30 52, 44 44, 74 16" fill="none" stroke="var(--warn)" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<path d="M40 46 C 30 36, 30 26, 42 20 C 48 32, 50 40, 40 46 Z" fill="var(--warn)" opacity=".9"/>' +
+      '<path d="M52 34 C 44 26, 46 16, 58 12 C 62 24, 62 30, 52 34 Z" fill="var(--accent)" opacity=".85"/>' +
+      '<circle cx="72" cy="17" r="6" fill="var(--accent)"/><circle cx="63" cy="24" r="4" fill="var(--warn)"/></svg>';
+    var tl = document.createElement('div'); tl.className = 'sprig';
+    tl.style.cssText = 'top:8px;left:8px;transform:rotate(-6deg)'; tl.innerHTML = SPRIG;
+    var br = document.createElement('div'); br.className = 'sprig';
+    br.style.cssText = 'bottom:6px;right:8px;transform:rotate(174deg)'; br.innerHTML = SPRIG;
+    stage.appendChild(tl); stage.appendChild(br);
+  }
+
+  function haptic() {
+    try {
+      var h = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback;
+      if (h) h.impactOccurred('light');
+    } catch (e) {}
+  }
+
   var el = document.getElementById('letter');
   if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   var raf = window.requestAnimationFrame.bind(window);
@@ -587,6 +661,7 @@
     else { el.style.transform = 'translateY(0) scale(1) rotateX(0)'; el.style.textShadow = '0 18px 46px var(--glow)'; ticking = false; last = 0; }
   }
   function flip() {
+    haptic();
     var carry = sp ? sp.v : 0;
     sp = new Spring(0.46, 0.24); sp.x = 0; sp.v = Math.min(carry, 6);
     if (!ticking) { ticking = true; last = 0; raf(frame); }
