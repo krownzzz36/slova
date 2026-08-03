@@ -1,0 +1,4 @@
+# Сборка словаря (tools/build_dict.py). Python 3.9+.
+pymorphy3
+pymorphy3-dicts-ru
+wordfreq

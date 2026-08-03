@@ -1,0 +1,15 @@
+{
+  "name": "slova",
+  "version": "1.0.0",
+  "description": "Telegram Mini App «Слова» — игра в слова с настоящей проверкой по словарю",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "e2e": "playwright test",
+    "serve": "python3 -m http.server 8777",
+    "dict": "python3 tools/build_dict.py && python3 tools/verify_dict.py"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0"
+  }
+}

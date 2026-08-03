@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Sandbox test</title>
+<style>body{font-family:-apple-system,sans-serif;margin:0;background:#111;color:#eee}
+#log{padding:12px;font-size:14px} .ok{color:#6c6} .bad{color:#f66}
+iframe{width:375px;height:640px;border:1px solid #444;display:block;margin:8px}</style>
+</head><body>
+<div id="log">Загрузка песочницы…</div>
+<!-- ТЗ §12.1 / тест §10.5: игра должна работать в sandbox без allow-forms -->
+<iframe id="f" sandbox="allow-scripts allow-same-origin" src="../index.html?v=sbx"></iframe>
+<script>
+function log(m,ok){ var d=document.getElementById('log'); d.innerHTML+='<div class="'+(ok?'ok':'bad')+'">'+(ok?'✓ ':'✗ ')+m+'</div>'; }
+var f=document.getElementById('f');
+f.onload=function(){
+  setTimeout(function(){
+    try{
+      var w=f.contentWindow, d=f.contentDocument;
+      log('iframe загрузился', true);
+      log('нет тегов <form> в разметке: '+(d.querySelectorAll('form').length===0), d.querySelectorAll('form').length===0);
+      var startBtn=d.getElementById('startBtn');
+      log('кнопка старта есть', !!startBtn);
+      // ждём словарь
+      var tries=0;
+      var iv=setInterval(function(){
+        tries++;
+        if(w.Dict && w.Dict.ready){
+          clearInterval(iv);
+          log('словарь загрузился в песочнице: '+w.Dict.size+' слов', w.Dict.size>1000);
+          startBtn.click();
+          var inGame=d.getElementById('game').classList.contains('on');
+          log('партия стартовала кликом (без submit)', inGame);
+          var inp=d.getElementById('word'); inp.value='арбуз'; d.getElementById('send').click();
+          var accepted=d.getElementById('letter').textContent==='З';
+          log('слово принято кликом по кнопке в песочнице', accepted);
+        } else if(tries>60){ clearInterval(iv); log('словарь не загрузился за 15с', false); }
+      },250);
+    }catch(e){ log('исключение: '+e.message, false); }
+  },300);
+};
+</script>
+</body></html>

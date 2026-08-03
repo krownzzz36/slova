@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Слова</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --bg:#f6f3ee; --card:#ffffff; --text:#1c1a17; --muted:#8a8378;
+    --line:#e6e0d6; --accent:#e8663c; --ok:#4a9d5f; --warn:#d4a017;
+    --shadow:0 2px 10px rgba(28,26,23,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#17171a; --card:#212126; --text:#f2efe9; --muted:#8e8a84;
+           --line:#32323a; --shadow:0 2px 10px rgba(0,0,0,.3); }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    display:flex; flex-direction:column; overscroll-behavior:none;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .screen{flex:1; display:none; flex-direction:column; min-height:0}
+  .screen.on{display:flex}
+  .wrap{width:100%; max-width:520px; margin:0 auto; padding:0 16px; display:flex; flex-direction:column; flex:1; min-height:0}
+  .scroll{flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch}
+  .dot{width:12px;height:12px;border-radius:50%;flex:none}
+  .btn{border:0; border-radius:16px; padding:17px 20px; font-size:18px; font-weight:700;
+       background:var(--accent); color:#fff; width:100%; cursor:pointer; font-family:inherit; min-height:56px}
+  .btn:disabled{opacity:.5; cursor:default}
+  .btn:active:not(:disabled){transform:scale(.985)}
+  .btn.soft{background:var(--card); color:var(--text); border:1px solid var(--line); font-size:15px; padding:13px; font-weight:600; min-height:52px}
+  .btn.soft.accent{border-color:var(--accent); color:var(--accent)}
+  .btn.ghost{background:transparent; color:var(--muted); font-weight:600; font-size:15px; padding:12px; min-height:auto}
+  .hint{color:var(--muted); font-size:13px; line-height:1.5}
+  .sect{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; font-weight:700; margin:18px 0 8px}
+
+  /* ---------- старт ---------- */
+  .logo{text-align:center; padding:18px 0 4px}
+  .logo h1{font-size:38px; margin:0; letter-spacing:-1px; font-weight:800}
+  .logo p{color:var(--muted); margin:6px 0 0; font-size:14px; line-height:1.4}
+  .prow{display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--line);
+        border-radius:16px; padding:12px 14px; box-shadow:var(--shadow); margin-bottom:8px}
+  .prow input{flex:1; border:0; background:transparent; color:var(--text); font-size:17px; font-weight:600; outline:none; min-width:0; font-family:inherit}
+  .prow .del{border:0;background:transparent;color:var(--muted);font-size:20px;padding:0 2px;cursor:pointer;line-height:1;flex:none}
+  .addp{border:1px dashed var(--line); background:transparent; color:var(--muted); border-radius:16px;
+        padding:13px; width:100%; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; min-height:48px}
+  .chips{display:flex; gap:8px; flex-wrap:wrap}
+  .chip{border:1px solid var(--line); background:var(--card); color:var(--muted); border-radius:12px;
+        padding:12px 14px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; flex:1; min-width:64px; min-height:48px}
+  .chip.on{border-color:var(--accent); color:var(--accent); background:var(--card)}
+  .toggle{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
+          border-radius:16px; padding:14px; box-shadow:var(--shadow); margin-bottom:8px}
+  .toggle .tt{flex:1; min-width:0}
+  .toggle .tt b{display:block; font-size:15px; font-weight:600}
+  .toggle .tt span{font-size:12.5px; color:var(--muted)}
+  .sw{width:50px;height:30px;border-radius:15px;background:var(--line);position:relative;flex:none;cursor:pointer;transition:background .15s}
+  .sw i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .sw.on{background:var(--ok)}
+  .sw.on i{left:23px}
+  .rowbtn{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
+          border-radius:16px; padding:14px; box-shadow:var(--shadow); margin-bottom:8px; cursor:pointer; width:100%; font-family:inherit; text-align:left; color:var(--text)}
+  .rowbtn b{flex:1; font-size:15px; font-weight:600}
+  .rowbtn .arr{color:var(--muted); font-size:18px}
+  .dictline{font-size:12.5px; color:var(--muted); text-align:center; padding:10px 0 2px}
+  .dictline b{color:var(--text); font-weight:700}
+  .resume{background:var(--card); border:1px solid var(--accent); border-radius:16px; padding:14px; box-shadow:var(--shadow); margin:6px 0 2px; display:none}
+  .resume.on{display:block}
+  .resume p{margin:0 0 10px; font-size:14.5px; font-weight:600}
+  .resume .rb{display:flex; gap:8px}
+
+  /* ---------- игра ---------- */
+  .top{display:flex; gap:6px; padding:10px 0 8px; align-items:center}
+  .scores{flex:1; display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none}
+  .scores::-webkit-scrollbar{display:none}
+  .sc{background:var(--card); border:1px solid var(--line); border-radius:13px; padding:7px 10px;
+      box-shadow:var(--shadow); flex:1 0 auto; min-width:78px}
+  .sc.active{border-color:var(--accent); border-width:2px; padding:6px 9px}
+  .sc .n{font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+         display:flex; align-items:center; gap:5px; margin-bottom:1px}
+  .sc .n .dot{width:8px;height:8px}
+  .sc .v{font-size:19px; font-weight:800; line-height:1.15}
+  .sc .t{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
+  .iconbtn{border:0;background:transparent;color:var(--muted);font-size:20px;padding:8px 4px;cursor:pointer;line-height:1;flex:none}
+
+  .stage{background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow);
+         padding:14px 16px 16px; text-align:center; margin-bottom:10px; position:relative; overflow:hidden}
+  .bar{position:absolute;left:0;top:0;height:3px;background:var(--accent);width:0%;transition:width .1s linear}
+  .turn{font-size:15px; color:var(--muted)}
+  .turn b{color:var(--text)}
+  .series{position:absolute; right:12px; top:10px; font-size:12px; font-weight:700; color:var(--warn); opacity:0; transition:opacity .2s}
+  .series.on{opacity:1}
+  .letter{font-size:72px; font-weight:800; line-height:1; letter-spacing:-2px; margin:2px 0 2px; color:var(--accent)}
+  .letter.small{font-size:30px; letter-spacing:0; color:var(--text); font-weight:700; padding:14px 0 8px}
+  .letter.dead{color:var(--warn)}
+  .clock{font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.5px}
+  .prev{font-size:13px; color:var(--muted); min-height:18px; margin-top:2px}
+  .mask{font-size:22px; font-weight:800; letter-spacing:4px; color:var(--text); min-height:0; margin-top:6px; display:none}
+  .mask.on{display:block}
+  .mask small{display:block; font-size:12px; letter-spacing:0; color:var(--muted); font-weight:600; margin-top:2px}
+  .task{font-size:13.5px; font-weight:700; color:var(--warn); min-height:0; margin-top:8px; display:none}
+  .task.on{display:block}
+  .task.hit{color:var(--ok)}
+  .sc .hearts{font-size:11px; line-height:1; letter-spacing:1px; margin-top:2px}
+  .sc .bonus{font-size:11px; color:var(--warn); font-weight:700}
+  .sc.out{opacity:.45}
+  .pause-ov{position:fixed; inset:0; background:rgba(0,0,0,.72); display:none; align-items:center; justify-content:center; z-index:50; padding:24px}
+  .pause-ov.on{display:flex}
+  .pause-card{background:var(--card); border:1px solid var(--line); border-radius:22px; padding:26px 20px; width:100%; max-width:340px; text-align:center; box-shadow:var(--shadow)}
+  .pause-title{font-size:30px; font-weight:800; margin-bottom:4px}
+  .pause-sub{font-size:13px; color:var(--muted); margin-bottom:18px}
+  .pause-card .btn{margin-top:8px}
+
+  .form{display:flex; gap:7px; margin-bottom:8px; align-items:stretch}
+  .form input{flex:1; min-width:0; border:1px solid var(--line); background:var(--card); color:var(--text);
+              border-radius:16px; padding:15px; font-size:18px; font-weight:600; outline:none; font-family:inherit; min-height:52px}
+  .form input:focus{border-color:var(--accent)}
+  .sq{border:0; border-radius:16px; width:56px; flex:none; font-size:20px; font-weight:800; cursor:pointer; font-family:inherit}
+  #mic{background:var(--card); border:1px solid var(--line); color:var(--text)}
+  #mic.rec{background:var(--accent); border-color:var(--accent); color:#fff; animation:pulse 1s infinite}
+  #mic.off{opacity:.35}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+  #send{background:var(--accent); color:#fff}
+  .msgwrap{min-height:46px; margin-bottom:4px}
+  .msg{font-size:14px; min-height:19px; text-align:center; font-weight:600; color:var(--accent)}
+  .msg.good{color:var(--ok)}
+  .override{display:none; margin:6px auto 0; border:1px solid var(--line); background:var(--card); color:var(--muted);
+            border-radius:12px; padding:8px 16px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit}
+  .override.on{display:block}
+
+  .hitem{display:flex; align-items:baseline; gap:9px; padding:8px 12px; background:var(--card);
+         border:1px solid var(--line); border-radius:13px; margin-bottom:5px}
+  .hitem.pass{background:transparent; border-style:dashed}
+  .hitem .who{font-size:11.5px; flex:none}
+  .hitem .w{font-size:16.5px; font-weight:600; text-transform:capitalize; flex:1; min-width:0}
+  .hitem .w .hl{color:var(--accent)}
+  .hitem .badge{font-size:12px; color:var(--muted); flex:none}
+  .hitem .ms{font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; flex:none}
+  .hitem.pass .w{color:var(--muted); font-weight:500; font-size:14px; text-transform:none}
+  .empty{text-align:center; color:var(--muted); font-size:13.5px; padding:18px 10px; line-height:1.5}
+  .bottom{padding:7px 0 12px; display:flex; flex-direction:column; gap:7px}
+  .bottom .r{display:flex; gap:7px}
+
+  /* ---------- итоги ---------- */
+  #over .wrap{padding-bottom:16px}
+  #over h2{font-size:28px; margin:16px 0 2px; font-weight:800; text-align:center}
+  #over .sub{text-align:center; color:var(--muted); font-size:14px; margin-bottom:14px}
+  .frow{display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--line);
+        border-radius:16px; padding:13px 15px; box-shadow:var(--shadow); margin-bottom:8px}
+  .frow.win{border-color:var(--ok); border-width:2px; padding:12px 14px}
+  .frow .fn{flex:1; min-width:0; font-size:16px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .frow .fs{text-align:right; flex:none}
+  .frow .fs b{display:block; font-size:19px; font-weight:800; font-variant-numeric:tabular-nums}
+  .frow .fs span{font-size:11.5px; color:var(--muted)}
+
+  .cards{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px}
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:11px 13px}
+  .stat .k{font-size:11.5px; color:var(--muted); margin-bottom:2px}
+  .stat .val{font-size:16px; font-weight:800}
+  .stat .val small{font-size:11.5px; color:var(--muted); font-weight:600}
+  .dist{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:8px}
+  .drow{display:flex; align-items:center; gap:9px; margin:6px 0}
+  .drow .dl{width:20px; font-weight:800; font-size:15px; text-transform:uppercase; text-align:center; flex:none}
+  .drow .track{flex:1; height:9px; background:var(--line); border-radius:5px; overflow:hidden}
+  .drow .fill{height:100%; background:var(--accent); border-radius:5px}
+  .drow .dp{width:38px; text-align:right; font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; flex:none}
+  .pp{background:var(--card); border:1px solid var(--line); border-radius:14px; margin-bottom:8px; overflow:hidden}
+  .pp .head{display:flex; align-items:center; gap:10px; padding:12px 14px; cursor:pointer}
+  .pp .head .fn{flex:1; font-weight:700; font-size:15px}
+  .pp .head .mini{font-size:12.5px; color:var(--muted)}
+  .pp .head .arr{color:var(--muted); font-size:16px; transition:transform .15s}
+  .pp.open .head .arr{transform:rotate(90deg)}
+  .pp .body{display:none; padding:0 14px 12px; font-size:13px; color:var(--muted); line-height:1.7}
+  .pp.open .body{display:block}
+  .pp .body b{color:var(--text); font-weight:600}
+
+  /* ---------- свои слова ---------- */
+  #custom h2{font-size:24px; font-weight:800; margin:16px 0 4px}
+  .citem{display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
+         border-radius:13px; padding:11px 14px; margin-bottom:6px}
+  .citem .cw{flex:1; font-size:16px; font-weight:600; text-transform:capitalize}
+  .citem .cd{border:0; background:transparent; color:var(--muted); font-size:19px; cursor:pointer; padding:0 4px}
+</style>
+</head>
+<body>
+
+<!-- ================= СТАРТ ================= -->
+<section id="setup" class="screen on">
+  <div class="wrap">
+    <div class="scroll">
+      <div class="logo">
+        <h1>Слова</h1>
+        <p>Арбуз → Зима → Анчоус</p>
+      </div>
+
+      <div class="resume" id="resumeBanner">
+        <p id="resumeText">Продолжить прерванный раунд?</p>
+        <div class="rb">
+          <button class="btn soft accent" id="resumeYes" style="flex:1">Продолжить</button>
+          <button class="btn soft" id="resumeNo" style="flex:0 0 120px">Не надо</button>
+        </div>
+      </div>
+
+      <div class="toggle" style="border-color:var(--accent)">
+        <div class="tt"><b>🧸 Детский режим</b><span>крупно, без таймера, всё прощает, подсказки без лимита</span></div>
+        <div class="sw" id="kidsSw"><i></i></div>
+      </div>
+
+      <div class="sect">Игроки <span style="text-transform:none;letter-spacing:0;font-weight:600">· 1 = игра сам с собой</span></div>
+      <div id="plist"></div>
+      <button class="addp" id="addP">+ добавить игрока</button>
+
+      <div class="sect">Сколько думать на ход</div>
+      <div class="chips" id="limits"></div>
+      <p class="hint" style="margin:8px 2px 0">Время каждого копится отдельно. Побеждает тот, кто в среднем думал меньше всех.</p>
+
+      <div class="sect">Жизни</div>
+      <div class="chips" id="livesChips"></div>
+      <p class="hint" style="margin:8px 2px 0">Пас или просроченное время снимают сердечко. Кончились — игрок выбывает.</p>
+
+      <div class="sect">Что засчитывать</div>
+      <div class="toggle">
+        <div class="tt"><b>Имена, города, страны</b><span>Иван, Москва, Франция — собственные имена</span></div>
+        <div class="sw" id="properSw"><i></i></div>
+      </div>
+      <div class="toggle">
+        <div class="tt"><b>Любые части речи</b><span>иначе только существительные и прилагательные</span></div>
+        <div class="sw" id="posSw"><i></i></div>
+      </div>
+      <div class="toggle">
+        <div class="tt"><b>Не пускать однокоренные</b><span>трава / травка — одно слово</span></div>
+        <div class="sw" id="rootSw"><i></i></div>
+      </div>
+      <div class="toggle">
+        <div class="tt"><b>Пропускать «й»</b><span>после «трамвай» — сразу на «а»</span></div>
+        <div class="sw" id="jSw"><i></i></div>
+      </div>
+
+      <div class="sect">Подсказки и поблажки</div>
+      <div class="chips" id="hintLimits"></div>
+      <p class="hint" style="margin:8px 2px 0">Подсказка (+5 сек) показывает слово. А ещё 3 раза за игру можно «Сменить букву» — ответить на предпоследнюю.</p>
+
+      <div class="sect">Задания</div>
+      <div class="toggle">
+        <div class="tt"><b>🎯 Режим заданий</b><span>«закончи на С» — за выполнение бонусные очки</span></div>
+        <div class="sw" id="tasksSw"><i></i></div>
+      </div>
+
+      <div class="sect">Копилка слов</div>
+      <div class="toggle">
+        <div class="tt"><b>Помнить прошлые игры</b><span id="memInfo"></span></div>
+        <div class="sw" id="memSw"><i></i></div>
+      </div>
+      <button class="btn ghost" id="clearMem" style="margin-top:2px">Очистить копилку</button>
+      <button class="rowbtn" id="customBtn" style="margin-top:8px">
+        <b>Свои слова</b><span class="mini" id="customCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
+      </button>
+
+      <div class="dictline" id="dictStatus">словарь загружается…</div>
+      <div style="height:8px"></div>
+    </div>
+    <div style="padding:6px 0 14px">
+      <button class="btn" id="startBtn">Играть</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ИГРА ================= -->
+<section id="game" class="screen">
+  <div class="wrap">
+    <div class="top">
+      <div class="scores" id="scores"></div>
+    </div>
+
+    <div class="stage">
+      <div class="bar" id="bar"></div>
+      <div class="series" id="series"></div>
+      <div class="turn">Ходит <b id="turnName"></b></div>
+      <div class="letter" id="letter">·</div>
+      <div class="clock" id="clock">0,0 с</div>
+      <div class="prev" id="prev"></div>
+      <div class="mask" id="mask"></div>
+      <div class="task" id="task"></div>
+    </div>
+
+    <div class="form" id="form">
+      <button type="button" class="sq" id="mic">🎤</button>
+      <input id="word" placeholder="слово" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" inputmode="text">
+      <button type="button" class="sq" id="send">→</button>
+    </div>
+    <div class="msgwrap">
+      <div class="msg" id="msg"></div>
+      <button type="button" class="override" id="overrideBtn">Всё равно засчитать</button>
+    </div>
+
+    <div class="scroll" id="hist"></div>
+
+    <div class="bottom">
+      <div class="r">
+        <button class="btn soft" id="passBtn">Пас</button>
+        <button class="btn soft" id="hintBtn">Подсказка</button>
+      </div>
+      <div class="r">
+        <button class="btn soft" id="swapBtn">Сменить букву</button>
+        <button class="btn soft" id="undoBtn" style="flex:0 0 110px">Отмена</button>
+      </div>
+      <div class="r">
+        <button class="btn soft" id="pauseBtn">⏸ Пауза</button>
+        <button class="btn soft accent" id="finishBtn">Завершить игру</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- пауза -->
+  <div class="pause-ov" id="pauseOv">
+    <div class="pause-card">
+      <div class="pause-title">⏸ Пауза</div>
+      <div class="pause-sub" id="pauseSub">Время остановлено</div>
+      <button class="btn" id="resumeBtn">Продолжить</button>
+      <button class="btn soft" id="pauseFinish">Завершить игру</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ИТОГИ ================= -->
+<section id="over" class="screen">
+  <div class="wrap">
+    <div class="scroll">
+      <h2 id="overTitle"></h2>
+      <div class="sub" id="overSub"></div>
+      <div id="final"></div>
+
+      <div class="sect" id="breakHead">Разбор раунда</div>
+      <div class="cards" id="roundCards"></div>
+      <div class="dist" id="letterDist"></div>
+      <div id="perPlayer"></div>
+      <div style="height:10px"></div>
+    </div>
+    <div style="padding:6px 0 14px; display:flex; flex-direction:column; gap:8px">
+      <button class="btn" id="againKeep">Ещё раз — помнить слова</button>
+      <button class="btn soft" id="shareBtn">Поделиться результатом</button>
+      <button class="btn soft" id="againFresh">Ещё раз — с чистого листа</button>
+      <button class="btn ghost" id="menuBtn">Настройки и игроки</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= СВОИ СЛОВА ================= -->
+<section id="custom" class="screen">
+  <div class="wrap">
+    <div class="scroll">
+      <h2>Свои слова</h2>
+      <p class="hint" id="customHint" style="margin:0 2px 14px">Слова, зачтённые вручную. В следующих играх проходят проверку сами.</p>
+      <div id="customList"></div>
+    </div>
+    <div style="padding:6px 0 14px">
+      <button class="btn ghost" id="customBack">Назад</button>
+    </div>
+  </div>
+</section>
+
+<!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
+     ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
+<script src="src/rules.js?v=4" defer></script>
+<script src="src/morph.js?v=4" defer></script>
+<script src="src/dict.js?v=4" defer></script>
+<script src="src/stats.js?v=4" defer></script>
+<script src="src/storage.js?v=4" defer></script>
+<script src="src/ui.js?v=4" defer></script>
+</body>
+</html>
