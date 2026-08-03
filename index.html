@@ -188,6 +188,23 @@
   .citem .cw{flex:1; font-size:16px; font-weight:600; text-transform:capitalize}
   .citem .cd{border:0; background:transparent; color:var(--muted); font-size:19px; cursor:pointer; width:44px; height:44px; display:flex; align-items:center; justify-content:center; margin:-8px -8px -8px 0; flex:none}
 
+  /* ---------- онбординг ---------- */
+  .ob-ov{position:fixed; inset:0; background:var(--bg); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:60; padding:24px; overflow-y:auto}
+  .ob-ov.on{display:flex}
+  .ob-card{width:100%; max-width:400px; text-align:center; margin:auto}
+  .ob-title{font-size:26px; font-weight:800; margin-bottom:18px}
+  .ob-chain{display:flex; flex-direction:column; align-items:center}
+  .ob-t{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 24px; font-size:23px; font-weight:800; box-shadow:var(--shadow); min-width:170px; opacity:0; animation:obIn .35s ease forwards}
+  .ob-t b{color:var(--accent)}
+  .ob-arr{color:var(--muted); font-size:12.5px; font-weight:700; padding:6px 0; opacity:0; animation:obIn .35s ease forwards}
+  .ob-q{border-style:dashed; color:var(--muted); letter-spacing:2px}
+  .ob-q .cur{color:var(--accent); animation:blink 1s steps(1) infinite}
+  @keyframes obIn{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+  @keyframes blink{50%{opacity:0}}
+  .ob-cap{color:var(--muted); font-size:14.5px; line-height:1.5; margin:20px 4px}
+  .ob-link{display:block; margin:8px auto 0; background:transparent; border:0; color:var(--accent); font-weight:700; font-size:14px; cursor:pointer; font-family:inherit; min-height:44px}
+  @media (prefers-reduced-motion: reduce){ .ob-t,.ob-arr{animation:none; opacity:1} .ob-q .cur{animation:none} }
+
   /* ---------- история игр ---------- */
   #history h2{font-size:24px; font-weight:800; margin:16px 0 4px}
   .gitem{background:var(--card); border:1px solid var(--line); border-radius:14px; margin-bottom:8px; overflow:hidden}
@@ -214,6 +231,7 @@
         <h1>Слова <span>— тебе на А</span></h1>
         <p>Арбуз → Зима → Анчоус</p>
       </div>
+      <button class="ob-link" id="howToBtn">Как играть?</button>
 
       <div class="resume" id="resumeBanner">
         <p id="resumeText">Продолжить прерванный раунд?</p>
@@ -402,6 +420,24 @@
     </div>
   </div>
 </section>
+
+<!-- ================= ОНБОРДИНГ ================= -->
+<div class="ob-ov" id="onboard">
+  <div class="ob-card">
+    <div class="ob-title">Как играть</div>
+    <div class="ob-chain">
+      <div class="ob-t" style="animation-delay:0s">Арбу<b>з</b></div>
+      <div class="ob-arr" style="animation-delay:.1s">↓ на «з»</div>
+      <div class="ob-t" style="animation-delay:.2s"><b>з</b>им<b>а</b></div>
+      <div class="ob-arr" style="animation-delay:.3s">↓ на «а»</div>
+      <div class="ob-t" style="animation-delay:.4s"><b>а</b>втобу<b>с</b></div>
+      <div class="ob-arr" style="animation-delay:.5s">↓ на «с»</div>
+      <div class="ob-t ob-q" style="animation-delay:.6s">? <span class="cur">|</span></div>
+    </div>
+    <p class="ob-cap">Следующее слово — на последнюю букву. Телефон проверит и запомнит.</p>
+    <button class="btn" id="obClose">Играем</button>
+  </div>
+</div>
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->

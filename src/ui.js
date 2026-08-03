@@ -152,6 +152,10 @@
       TTS.speak(u);
     } catch (e) {}
   }
+  /* ---------- онбординг (первый запуск) ---------- */
+  function showOnboard() { $('onboard').classList.add('on'); try { $('obClose').focus(); } catch (e) {} }
+  function closeOnboard() { $('onboard').classList.remove('on'); Storage.set('onboarded', 1); }
+
   function memInfo() {
     $('memInfo').textContent = MEM.size
       ? ('в копилке ' + MEM.size + ' сл.' + (Storage.persistent ? '' : ' — до закрытия'))
@@ -799,6 +803,8 @@
     $('clearHistory').addEventListener('click', function () { HISTORY = []; saveHistory(); renderHistory(); });
     $('historyList').addEventListener('click', function (e) { var it = e.target.closest ? e.target.closest('.gitem') : null; if (it) it.classList.toggle('open'); });
 
+    $('obClose').addEventListener('click', closeOnboard);
+    $('howToBtn').addEventListener('click', showOnboard);
     $('startBtn').addEventListener('click', function () { newGame(); });
     $('send').addEventListener('click', submitWord);
     $('word').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); submitWord(); } });
@@ -838,7 +844,10 @@
     if (tg) { try { tg.ready(); tg.expand(); applyTheme(); tg.onEvent && tg.onEvent('themeChanged', applyTheme); } catch (e) {} }
     bind();
     $('startBtn').disabled = true;
-    loadAll(function () { renderSetup(); checkResume(); });
+    loadAll(function () {
+      renderSetup(); checkResume();
+      Storage.get('onboarded', function (v) { if (!v) showOnboard(); });  // первый запуск (Задача 1)
+    });
     loadDict();
     // офлайн + мгновенное повторное открытие
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
