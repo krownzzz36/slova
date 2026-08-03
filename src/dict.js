@@ -25,7 +25,7 @@
   }
 
   var full = null, other = null, names = null, geo = null, freq = [], firstCount = {}, meta = {};
-  var hyphMap = {}, freqPos = {}, ready = false;
+  var hyphMap = {}, freqPos = {}, themes = {}, ready = false;
   var ALPHA = 'абвгдежзийклмнопрстуфхцчшщъыьэюя';
 
   function build(g) {
@@ -40,8 +40,14 @@
     full.forEach(function (w) { firstCount[w[0]] = (firstCount[w[0]] || 0) + 1; });
     for (var i = 0; i < freq.length; i++) freqPos[freq[i]] = i;
     expand(g.DHYPH || '').forEach(function (disp) { if (disp && Rules) hyphMap[Rules.norm(disp)] = disp; });
+    themes = g.DTHEMES || {};
     ready = true;
     return api;
+  }
+  function themeNames() { return Object.keys(themes); }
+  function browseTheme(name) {
+    var arr = (themes[name] || []).slice();
+    return { words: arr, total: arr.length, shown: arr.length };
   }
 
   function has(nk) { return !!full && full.has(nk); }
@@ -140,6 +146,8 @@
     build: build,
     letters: letters,
     browse: browse,
+    themeNames: themeNames,
+    browseTheme: browseTheme,
     has: has,
     hasOther: hasOther,
     hasName: hasName,

@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '10';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '11';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -783,26 +783,50 @@
   }
 
   /* ============ СПРАВОЧНИК СЛОВ ============ */
-  var REF_CATS = [{ v: 'freq', t: 'Частые' }, { v: 'full', t: 'Все слова' }, { v: 'proper', t: 'Имена, города' }];
-  var refCat = 'freq', refLetter = '';
+  var BASE_CATS = [{ v: 'freq', t: 'Частые' }, { v: 'full', t: 'Все слова' }, { v: 'proper', t: 'Имена, города' }];
+  var THEME_EMOJI = {
+    'Животные': '🐘', 'Птицы': '🐦', 'Рыбы и море': '🐟', 'Насекомые': '🐛', 'Растения': '🌳',
+    'Еда': '🍲', 'Фрукты и овощи': '🍎', 'Транспорт': '🚗', 'Одежда': '👕', 'Дом и мебель': '🛋',
+    'Посуда': '🍽', 'Тело': '🧍', 'Профессии': '👷', 'Природа': '🌦', 'Школа и вещи': '🎒',
+    'Спорт': '⚽', 'Музыка': '🎵'
+  };
+  var refCat = 'freq', refLetter = '', refCap = 300;
+  function refIsTheme(c) { return dictReady && Dict.themeNames().indexOf(c) >= 0; }
+
   function renderRef() {
     if (!dictReady) { $('refWords').innerHTML = '<div class="empty">Словарь ещё грузится…</div>'; return; }
-    $('refCats').innerHTML = REF_CATS.map(function (c) {
-      return '<button class="chip' + (refCat === c.v ? ' on' : '') + '" data-cat="' + c.v + '">' + c.t + '</button>';
+    var cats = BASE_CATS.slice();
+    Dict.themeNames().forEach(function (n) { cats.push({ v: n, t: (THEME_EMOJI[n] || '•') + ' ' + n }); });
+    $('refCats').innerHTML = cats.map(function (c) {
+      return '<button class="chip' + (refCat === c.v ? ' on' : '') + '" data-cat="' + esc(c.v) + '">' + esc(c.t) + '</button>';
     }).join('');
-    var lets = Dict.letters(refCat);
-    if (lets.indexOf(refLetter) === -1) refLetter = lets[0] || 'а';
-    $('refLetters').innerHTML = lets.map(function (L) {
-      return '<button class="' + (L === refLetter ? 'on' : '') + '" data-let="' + L + '">' + L + '</button>';
-    }).join('');
-    var res = Dict.browse(refCat, refLetter, 400);
-    $('refCount').textContent = 'Буква «' + refLetter.toUpperCase() + '» · ' + res.total + ' ' +
-      plural(res.total, 'слово', 'слова', 'слов') + (res.shown < res.total ? ' · показаны первые ' + res.shown : '');
+
+    var theme = refIsTheme(refCat), res, disp;
+    if (theme) {
+      $('refLetters').style.display = 'none';
+      res = Dict.browseTheme(refCat);
+      $('refCount').textContent = refCat + ' · ' + res.total + ' ' + plural(res.total, 'слово', 'слова', 'слов');
+      disp = true;
+    } else {
+      $('refLetters').style.display = '';
+      var lets = Dict.letters(refCat);
+      if (lets.indexOf(refLetter) === -1) refLetter = lets[0] || 'а';
+      $('refLetters').innerHTML = lets.map(function (L) {
+        return '<button class="' + (L === refLetter ? 'on' : '') + '" data-let="' + L + '">' + L + '</button>';
+      }).join('');
+      res = Dict.browse(refCat, refLetter, refCap);
+      $('refCount').textContent = 'Буква «' + refLetter.toUpperCase() + '» · ' + res.total + ' ' +
+        plural(res.total, 'слово', 'слова', 'слов') + (res.shown < res.total ? ' · показаны ' + res.shown : '');
+      disp = false;
+    }
+
     var html = res.words.map(function (w) {
-      return '<span class="rw' + (MEM.has(w) ? ' used' : '') + '">' + esc(cap(Dict.display(w))) + '</span>';
+      var key = disp ? Rules.norm(w) : w;
+      var text = disp ? w : Dict.display(w);
+      return '<span class="rw' + (MEM.has(key) ? ' used' : '') + '">' + esc(cap(text)) + '</span>';
     }).join('');
-    if (res.shown < res.total) html += '<div class="more">…ещё ' + (res.total - res.shown) + ' — тут только начало алфавита</div>';
-    $('refWords').innerHTML = html || '<div class="empty">Нет слов на эту букву.</div>';
+    if (res.shown < res.total) html += '<button class="more" id="refMore">Показать все ' + res.total + ' →</button>';
+    $('refWords').innerHTML = html || '<div class="empty">Пусто.</div>';
     $('refWords').parentNode.scrollTop = 0;
   }
 
@@ -929,8 +953,9 @@
     $('historyBack').addEventListener('click', function () { renderSetup(); show('setup'); });
     $('refBtn').addEventListener('click', function () { renderRef(); show('ref'); });
     $('refBack').addEventListener('click', function () { renderSetup(); show('setup'); });
-    $('refCats').addEventListener('click', function (e) { var c = e.target.getAttribute('data-cat'); if (c) { refCat = c; renderRef(); } });
-    $('refLetters').addEventListener('click', function (e) { var L = e.target.getAttribute('data-let'); if (L) { refLetter = L; renderRef(); } });
+    $('refCats').addEventListener('click', function (e) { var c = e.target.getAttribute('data-cat'); if (c) { refCat = c; refCap = 300; refLetter = ''; renderRef(); } });
+    $('refLetters').addEventListener('click', function (e) { var L = e.target.getAttribute('data-let'); if (L) { refLetter = L; refCap = 300; renderRef(); } });
+    $('refWords').addEventListener('click', function (e) { if (e.target.id === 'refMore') { refCap = 1e9; renderRef(); } });
     $('clearHistory').addEventListener('click', function () { HISTORY = []; saveHistory(); renderHistory(); });
     $('historyList').addEventListener('click', function (e) { var it = e.target.closest ? e.target.closest('.gitem') : null; if (it) it.classList.toggle('open'); });
 

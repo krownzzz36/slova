@@ -229,7 +229,8 @@
   .refwords .rw{background:var(--card); border:1px solid var(--line); border-radius:11px; padding:8px 12px;
                 font-size:15px; font-weight:600; color:var(--text)}
   .refwords .rw.used{color:var(--muted); text-decoration:line-through; opacity:.6; font-weight:500}
-  .refwords .more{color:var(--muted); font-size:13px; padding:8px 4px; width:100%}
+  .refwords .more{width:100%; margin-top:4px; border:1px solid var(--accent); background:transparent; color:var(--accent);
+                  border-radius:12px; padding:12px; min-height:46px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit}
 
   /* ---------- история игр ---------- */
   #history h2{font-size:24px; font-weight:800; margin:16px 0 4px}
@@ -246,143 +247,115 @@
   .gitem .gb .pdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
   .gitem .gtag{display:inline-block; font-size:11px; color:var(--muted); border:1px solid var(--line); border-radius:8px; padding:1px 7px; margin:0 4px 4px 0}
 </style>
-<!-- ═══════════ СКИН «ЖИВАЯ ЛИТЕРА» — хохлома, арт-дирекшн поверх базовых стилей ═══════════ -->
+<!-- ═══════════ СКИН «ЖИВАЯ ЛИТЕРА» v3 — редакторская сдержанность ═══════════ -->
 <style>
   :root{
-    --bg:#F0E3C9; --card:#FBF3E1; --card-2:#F6EBD4; --text:#221910; --muted:#786751;
-    --line:#E4D2B0; --accent:#BE3223; --accent-2:#D5482F; --ok:#5F6E2E; --warn:#AC7810;
-    --glow:rgba(188,138,28,.30);
+    --bg:#EFE1C4; --card:#F8EEDA; --text:#22190F; --muted:#7C6A52;
+    --line:#E2CFA9; --accent:#B23122; --ok:#5E6C2C; --warn:#A9760F;
+    --glow:rgba(120,70,20,.16);
     --serif:Georgia,"Times New Roman","Iowan Old Style",serif;
-    --shadow:0 2px 16px rgba(120,80,30,.10);
-    --shadow-lg:0 26px 60px -34px rgba(90,55,20,.55);
-    --hair:inset 0 1px 0 rgba(255,255,255,.55);
+    --shadow:0 1px 2px rgba(60,40,15,.05), 0 12px 30px -22px rgba(60,40,15,.4);
   }
   @media (prefers-color-scheme: dark){
     :root{
-      --bg:#120D09; --card:#211811; --card-2:#2A2015; --text:#F4E8D4; --muted:#B0997B;
-      --line:#39291B; --accent:#EE5B49; --accent-2:#F0705E; --ok:#A9B466; --warn:#ECB846;
-      --glow:rgba(236,184,70,.42);
-      --shadow:0 4px 20px rgba(0,0,0,.5);
-      --shadow-lg:0 30px 66px -30px rgba(0,0,0,.8);
-      --hair:inset 0 1px 0 rgba(255,255,255,.06);
+      --bg:#151009; --card:#221913; --text:#F1E6D2; --muted:#A89276;
+      --line:#3A2B1D; --accent:#DE5142; --ok:#A3B063; --warn:#E0AE44;
+      --glow:rgba(222,110,70,.20);
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 34px -22px rgba(0,0,0,.7);
     }
   }
 
-  /* — прочь дефолтная (синяя) обводка фокуса; для клавиатуры — тёплое кольцо — */
+  /* фокус: без дефолтного кольца, для клавиатуры — тихое */
   *:focus{outline:none}
   button:focus-visible, input:focus-visible, [tabindex]:focus-visible{
-    outline:none; box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent)}
+    outline:none; box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent)}
 
-  /* — атмосфера: тёплое свечение + зерно плёнки — */
+  /* атмосфера: один спокойный тёплый отсвет + едва заметное зерно */
   body{
-    background:
-      radial-gradient(120% 55% at 50% -8%, color-mix(in srgb, var(--warn) 13%, transparent), transparent 60%),
-      radial-gradient(80% 45% at 108% 104%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 62%),
-      radial-gradient(70% 40% at -8% 90%, color-mix(in srgb, var(--warn) 8%, transparent), transparent 60%),
-      var(--bg);
-    background-attachment:fixed;
-    -webkit-font-smoothing:antialiased;
+    background:radial-gradient(140% 60% at 50% -10%, color-mix(in srgb, var(--warn) 8%, transparent), transparent 55%), var(--bg);
+    background-attachment:fixed; -webkit-font-smoothing:antialiased;
   }
   body::after{
-    content:""; position:fixed; inset:0; z-index:9999; pointer-events:none; opacity:.05;
-    mix-blend-mode:soft-light;
+    content:""; position:fixed; inset:0; z-index:9999; pointer-events:none; opacity:.035; mix-blend-mode:soft-light;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   @media (prefers-reduced-transparency: reduce){ body::after{display:none} }
 
-  /* — голос «слов»: серифные заголовки — */
-  .logo{position:relative; padding:26px 0 6px}
-  .logo h1{font-family:var(--serif); font-size:clamp(31px, 8.4vw, 38px); font-weight:700; letter-spacing:-1.2px; line-height:1.04; text-wrap:balance}
-  .logo p{color:var(--muted); letter-spacing:.3px; margin-top:8px}
-  #over h2, .ob-title, .pause-title, #custom h2, #history h2{font-family:var(--serif); font-weight:700; letter-spacing:-.5px}
-  .sect{color:var(--warn); letter-spacing:.16em; font-size:11.5px}
+  /* один серифный голос: заголовки, слова и ЦИФРЫ */
+  .logo{padding:30px 0 8px}
+  .logo h1{font-family:var(--serif); font-size:clamp(30px, 8vw, 37px); font-weight:700; letter-spacing:-1px; line-height:1.05; text-wrap:balance}
+  .logo h1 span{color:inherit}
+  .logo p{font-family:var(--serif); font-style:italic; color:var(--muted); font-size:15px; letter-spacing:.2px; margin-top:10px}
+  #over h2, .ob-title, .pause-title, #custom h2, #history h2, #ref h2{font-family:var(--serif); font-weight:700; letter-spacing:-.4px}
+  .sect{color:var(--muted); letter-spacing:.18em; font-size:11px; font-weight:700}
 
-  /* — карточки: тёплый край + верхний блик — */
-  .toggle, .prow, .rowbtn, .adv-h, .daily, .resume, .sc, .stat, .frow, .dist, .pp, .gitem, .citem, .hitem, #mic, .chip{
-    border-radius:16px; box-shadow:var(--shadow), var(--hair);
+  /* поверхности: плоские, тонкая линия, тихая тень */
+  .toggle, .prow, .rowbtn, .adv-h, .daily, .resume, .sc, .stat, .frow, .dist, .pp, .gitem, .citem, .hitem, #mic{
+    border-radius:14px; box-shadow:var(--shadow);
   }
-  .toggle, .prow, .rowbtn, .adv-h, .daily, .resume{border-radius:18px}
 
-  /* — кнопки с характером + глянец — */
+  /* кнопки: плоские, матовые, уверенные */
   .btn{
-    background:linear-gradient(177deg, var(--accent-2), var(--accent) 62%, color-mix(in srgb, var(--accent) 86%, #000 14%));
-    box-shadow:0 12px 26px -12px var(--accent), 0 2px 6px -2px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.22);
-    border-radius:18px; letter-spacing:.01em; font-weight:800;
-    position:relative; overflow:hidden; transition:transform .14s cubic-bezier(.2,.85,.25,1), box-shadow .2s ease;
+    background:var(--accent); color:#fff; border-radius:14px; font-weight:700; letter-spacing:.01em;
+    box-shadow:var(--shadow); transition:transform .13s cubic-bezier(.2,.8,.2,1), filter .2s ease;
   }
-  .btn:not(.soft):not(.ghost)::before{
-    content:""; position:absolute; left:0; right:0; top:0; height:48%;
-    background:linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,0)); pointer-events:none;
-  }
-  .btn:active:not(:disabled){transform:scale(.96)}
-  .btn.soft{background:var(--card); color:var(--text); box-shadow:var(--shadow), var(--hair); border-radius:18px; font-weight:700}
+  .btn:active:not(:disabled){transform:scale(.975); filter:brightness(.95)}
+  .btn.soft{background:var(--card); color:var(--text); border:1px solid var(--line); box-shadow:var(--shadow); font-weight:600}
   .btn.soft.accent{border-color:var(--accent); color:var(--accent)}
-  .btn.ghost{background:transparent; box-shadow:none; overflow:visible}
-  .addp{border-radius:18px}
-  .addp:active, .rowbtn:active, .toggle:active, .adv-h:active, .chip:active{transform:scale(.99)}
-  .chip.on{box-shadow:0 0 0 1.5px var(--accent) inset, var(--shadow)}
+  .btn.ghost{background:transparent; box-shadow:none; color:var(--muted); font-weight:600}
+  .addp{border-radius:14px}
+  .chip.on{border-color:var(--accent); color:var(--accent); box-shadow:none}
   .sw.on{background:var(--ok)}
 
-  /* — СЦЕНА: буква-герой — */
+  /* сцена: тихая карточка — герой это сама буква */
   .stage{
-    border-radius:28px; padding:22px 18px 24px; perspective:820px; isolation:isolate;
-    border-color:color-mix(in srgb, var(--warn) 20%, var(--line));
-    background:
-      radial-gradient(115% 72% at 50% 12%, color-mix(in srgb, var(--warn) 20%, transparent), transparent 60%),
-      radial-gradient(90% 80% at 50% 120%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 55%),
-      var(--card);
-    box-shadow:var(--shadow-lg), var(--hair);
+    border-radius:20px; padding:24px 18px 26px; perspective:820px;
+    background:var(--card); border:1px solid var(--line); box-shadow:var(--shadow);
   }
-  .sprig{position:absolute; pointer-events:none; z-index:0; opacity:.9}
-  .turn{font-size:15px; position:relative; z-index:1}
-  .turn .avatar{box-shadow:0 0 0 3px color-mix(in srgb, var(--warn) 26%, transparent)}
+  .turn{font-size:15px}
   .letter{
-    font-family:var(--serif); font-weight:700; position:relative; z-index:1;
-    font-size:clamp(94px, 27vw, 140px); line-height:.92; letter-spacing:-5px; margin:8px 0 6px;
-    color:var(--accent);
-    text-shadow:0 20px 50px var(--glow), 0 0 34px color-mix(in srgb, var(--glow) 60%, transparent);
+    font-family:var(--serif); font-weight:700;
+    font-size:clamp(96px, 28vw, 148px); line-height:.9; letter-spacing:-5px; margin:12px 0 8px;
+    color:var(--accent); text-shadow:0 14px 44px var(--glow);
     transform-origin:center; backface-visibility:hidden; will-change:transform, text-shadow;
   }
   .letter.small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     font-size:30px; letter-spacing:0; color:var(--text); text-shadow:none; transform:none}
-  .clock{font-size:28px; letter-spacing:-.5px; position:relative; z-index:1}
-  .prev{position:relative; z-index:1}
-  .series{background:color-mix(in srgb, var(--warn) 18%, transparent); border-radius:999px; padding:3px 10px; top:12px; right:12px; z-index:1}
-  .bar{height:3px; background:linear-gradient(90deg, var(--warn), var(--accent)); z-index:2}
+  .clock{font-family:var(--serif); font-size:30px; font-weight:700; letter-spacing:0}
+  .series{background:transparent; color:var(--warn); font-weight:700; top:14px; right:14px; padding:0}
+  .bar{height:2px; background:var(--accent)}
+  .sc .v{font-family:var(--serif)}
 
-  /* — ввод — */
-  .form input{border-radius:18px; font-family:var(--serif); font-size:19px; box-shadow:var(--hair)}
-  .form input:focus{border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent)}
-  .sq{border-radius:16px}
-  #send{background:linear-gradient(177deg, var(--accent-2), var(--accent)); color:#fff;
-        box-shadow:0 10px 20px -10px var(--accent), inset 0 1px 0 rgba(255,255,255,.22)}
-  .override{border-radius:14px; font-weight:800}
+  /* ввод */
+  .form input{border-radius:14px; font-family:var(--serif); font-size:19px}
+  .form input:focus{border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent)}
+  .sq{border-radius:12px}
+  #send{background:var(--accent); color:#fff; box-shadow:var(--shadow)}
+  .override{border-radius:12px; font-weight:700}
 
-  /* — цепочка слов: связующая буква как вишнёвая пилюля — */
-  .hitem{border-radius:14px}
+  /* цепочка слов: связующая буква просто в цвете акцента, без badge */
+  .hitem{border-radius:12px}
   .hitem .w{font-family:var(--serif); font-size:17px}
-  .hitem .w .hl{color:#fff; background:var(--accent); border-radius:7px; padding:1px 6px; font-weight:800;
-                box-shadow:0 4px 10px -4px var(--accent)}
+  .hitem .w .hl{color:var(--accent); font-weight:700; background:none; padding:0; box-shadow:none}
 
-  /* — онбординг — */
-  .ob-ov{background:
-      radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--warn) 14%, transparent), transparent 60%),
-      var(--bg)}
-  .ob-title{font-size:28px; letter-spacing:-.5px; margin-bottom:22px}
-  .ob-t{font-family:var(--serif); border-radius:16px; box-shadow:var(--shadow), var(--hair); font-size:24px}
+  /* онбординг: плоско */
+  .ob-ov{background:var(--bg)}
+  .ob-title{font-size:27px; letter-spacing:-.4px; margin-bottom:22px}
+  .ob-t{font-family:var(--serif); border-radius:14px; box-shadow:var(--shadow); font-size:23px; font-weight:700}
   .ob-t b{color:var(--accent)}
 
-  /* — счёт активного игрока — */
-  .sc.active{box-shadow:0 0 0 2px var(--accent), 0 10px 24px -14px var(--accent)}
+  /* активный игрок */
+  .sc.active{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent)}
 
-  /* — итоги — */
-  .frow.win{border-color:var(--ok); box-shadow:0 0 0 1px var(--ok), var(--shadow)}
-  .drow .fill{background:linear-gradient(90deg, var(--warn), var(--accent))}
+  /* итоги */
+  .frow.win{border-color:var(--ok); box-shadow:0 0 0 1px var(--ok)}
+  .frow .fs b, .stat .val{font-family:var(--serif)}
+  .drow .fill{background:var(--accent)}
 
-  /* — вход экрана — */
-  @keyframes scrIn{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+  /* вход экрана */
+  @keyframes scrIn{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
   @media (prefers-reduced-motion: no-preference){
-    .screen.on > .wrap{animation:scrIn .5s cubic-bezier(.2,.8,.2,1)}
+    .screen.on > .wrap{animation:scrIn .45s cubic-bezier(.2,.8,.2,1)}
   }
 </style>
 </head>
@@ -631,13 +604,14 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=10" defer></script>
-<script src="src/morph.js?v=10" defer></script>
-<script src="src/dict.js?v=10" defer></script>
-<script src="src/stats.js?v=10" defer></script>
-<script src="src/storage.js?v=10" defer></script>
-<script src="src/sharecard.js?v=10" defer></script>
-<script src="src/ui.js?v=10" defer></script>
+<script src="src/rules.js?v=11" defer></script>
+<script src="src/morph.js?v=11" defer></script>
+<script src="src/dict.js?v=11" defer></script>
+<script src="src/stats.js?v=11" defer></script>
+<script src="src/storage.js?v=11" defer></script>
+<script src="src/sharecard.js?v=11" defer></script>
+<script src="data/themes.js?v=11" defer></script>
+<script src="src/ui.js?v=11" defer></script>
 
 <!-- «Живая литера»: орнамент хохломы в сцене + split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>
