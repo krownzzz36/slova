@@ -184,6 +184,21 @@
          border-radius:13px; padding:11px 14px; margin-bottom:6px}
   .citem .cw{flex:1; font-size:16px; font-weight:600; text-transform:capitalize}
   .citem .cd{border:0; background:transparent; color:var(--muted); font-size:19px; cursor:pointer; padding:0 4px}
+
+  /* ---------- история игр ---------- */
+  #history h2{font-size:24px; font-weight:800; margin:16px 0 4px}
+  .gitem{background:var(--card); border:1px solid var(--line); border-radius:14px; margin-bottom:8px; overflow:hidden}
+  .gitem .gh{display:flex; align-items:center; gap:9px; padding:12px 14px; cursor:pointer}
+  .gitem .gd{font-size:11px; color:var(--muted); flex:none; white-space:nowrap}
+  .gitem .gw{flex:1; min-width:0; font-size:14.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .gitem .gm{font-size:11.5px; color:var(--muted); flex:none; font-variant-numeric:tabular-nums}
+  .gitem .arr{color:var(--muted); font-size:16px; flex:none; transition:transform .15s}
+  .gitem.open .arr{transform:rotate(90deg)}
+  .gitem .gb{display:none; padding:0 14px 12px; font-size:13px; color:var(--muted); line-height:1.8}
+  .gitem.open .gb{display:block}
+  .gitem .gb b{color:var(--text); font-weight:600}
+  .gitem .gb .pdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+  .gitem .gtag{display:inline-block; font-size:11px; color:var(--muted); border:1px solid var(--line); border-radius:8px; padding:1px 7px; margin:0 4px 4px 0}
 </style>
 </head>
 <body>
@@ -258,6 +273,9 @@
       <button class="btn ghost" id="clearMem" style="margin-top:2px">Очистить копилку</button>
       <button class="rowbtn" id="customBtn" style="margin-top:8px">
         <b>Свои слова</b><span class="mini" id="customCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
+      </button>
+      <button class="rowbtn" id="historyBtn" style="margin-top:8px">
+        <b>История игр</b><span class="mini" id="historyCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
       </button>
 
       <div class="dictline" id="dictStatus">словарь загружается…</div>
@@ -363,13 +381,28 @@
   </div>
 </section>
 
+<!-- ================= ИСТОРИЯ ИГР ================= -->
+<section id="history" class="screen">
+  <div class="wrap">
+    <div class="scroll">
+      <h2>История игр</h2>
+      <p class="hint" style="margin:0 2px 14px">Последние сыгранные партии. Нажми, чтобы раскрыть.</p>
+      <div id="historyList"></div>
+    </div>
+    <div style="padding:6px 0 14px; display:flex; flex-direction:column; gap:8px">
+      <button class="btn ghost" id="clearHistory">Очистить историю</button>
+      <button class="btn ghost" id="historyBack">Назад</button>
+    </div>
+  </div>
+</section>
+
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=6" defer></script>
-<script src="src/morph.js?v=6" defer></script>
-<script src="src/dict.js?v=6" defer></script>
-<script src="src/stats.js?v=6" defer></script>
-<script src="src/storage.js?v=6" defer></script>
-<script src="src/ui.js?v=6" defer></script>
+<script src="src/rules.js?v=7" defer></script>
+<script src="src/morph.js?v=7" defer></script>
+<script src="src/dict.js?v=7" defer></script>
+<script src="src/stats.js?v=7" defer></script>
+<script src="src/storage.js?v=7" defer></script>
+<script src="src/ui.js?v=7" defer></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '6';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '7';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -19,6 +19,7 @@
     skipJ: true, hintLimit: 3, proper: false, anyPos: false, lives: 0, kids: false, tasks: false };
   var MEM = new Set();                 // копилка (нормализованные ключи)
   var CUSTOM = new Set();              // свои слова (проходят проверку всегда)
+  var HISTORY = [];                    // сыгранные партии (новые сверху)
   var G = null;
   var dictReady = false, dictDegraded = false;
   var timerId = null, turnStart = 0, warned = false, paused = false;
@@ -54,15 +55,17 @@
 
   /* ============ ХРАНИЛИЩЕ ============ */
   function loadAll(cb) {
-    var pending = 3;
+    var pending = 4;
     function done() { if (--pending === 0) cb(); }
     Storage.get('cfg', function (v) { if (v && typeof v === 'object') { for (var k in CFG) if (k in v) CFG[k] = v[k]; if (CFG.hintLimit === null) CFG.hintLimit = Infinity; } done(); });
     Storage.getList('memory', function (arr) { arr.forEach(function (w) { MEM.add(w); }); done(); });
     Storage.getList('custom', function (arr) { arr.forEach(function (w) { CUSTOM.add(w); }); done(); });
+    Storage.getList('history', function (arr) { HISTORY = (arr || []).filter(function (g) { return g && g.t; }); done(); });
   }
   function saveCfg() { var c = {}; for (var k in CFG) c[k] = (CFG[k] === Infinity ? null : CFG[k]); Storage.set('cfg', c); }
   function saveMem() { Storage.setList('memory', Array.from(MEM)); }
   function saveCustom() { Storage.setList('custom', Array.from(CUSTOM)); }
+  function saveHistory() { Storage.setList('history', HISTORY.slice(0, 50)); }
   function saveResume() {
     if (!G) return;
     Storage.set('resume', {
@@ -121,6 +124,7 @@
     $('memSw').classList.toggle('on', CFG.memory);
     memInfo();
     $('customCount').textContent = CUSTOM.size ? ('  ' + CUSTOM.size) : '';
+    $('historyCount').textContent = HISTORY.length ? ('  ' + HISTORY.length) : '';
   }
 
   // Детский режим — пресет прощающих настроек (ТЗ: чтобы ребёнок разобрался).
@@ -534,8 +538,28 @@
     }).join('');
 
     renderBreakdown(st);
+    recordHistory(st, winnerI, solo);
     $('againKeep').textContent = 'Ещё раз — помнить ' + MEM.size + ' сл.';
     show('over');
+  }
+
+  // Сохранить сыгранную партию в историю (ТЗ: история игр).
+  function recordHistory(st, winnerI, solo) {
+    var wp = st.players[winnerI];
+    var rec = {
+      t: Date.now(),
+      solo: solo, lives: CFG.lives, tasks: CFG.tasks, proper: CFG.proper, anyPos: CFG.anyPos,
+      totalWords: st.totalWords, durationMs: st.durationMs,
+      winner: wp ? wp.name : '', winnerAvg: (wp && wp.words) ? wp.avg : null,
+      players: st.players.map(function (p) {
+        return { name: p.name, color: p.color, words: p.words, avg: p.words ? p.avg : null,
+          bonus: p.bonus || 0, out: CFG.lives ? !!(G.players[p.i] && G.players[p.i].out) : false };
+      }),
+      top: st.longestWord ? { word: st.longestWord.word, player: who(st.longestWord.player) } : null
+    };
+    HISTORY.unshift(rec);
+    if (HISTORY.length > 50) HISTORY.length = 50;
+    saveHistory();
   }
 
   function who(i) { return G.players[i] ? G.players[i].name : ''; }
@@ -606,6 +630,42 @@
     $('customList').innerHTML = arr.length ? arr.map(function (w) {
       return '<div class="citem"><span class="cw">' + esc(cap(w)) + '</span><button class="cd" data-cw="' + esc(w) + '">✕</button></div>';
     }).join('') : '<div class="empty">Пока пусто. Слова попадают сюда, когда ты жмёшь «Всё равно засчитать» на неизвестном слове.</div>';
+  }
+
+  /* ============ ИСТОРИЯ ИГР ============ */
+  var MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  function fmtDate(t) {
+    var d = new Date(t), now = new Date();
+    var hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    var y = new Date(now); y.setDate(now.getDate() - 1);
+    if (d.toDateString() === now.toDateString()) return 'сегодня ' + hm;
+    if (d.toDateString() === y.toDateString()) return 'вчера ' + hm;
+    return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + hm;
+  }
+  function renderHistory() {
+    if (!HISTORY.length) {
+      $('historyList').innerHTML = '<div class="empty">Пока пусто.<br>Сыграйте партию — она появится здесь.</div>';
+      return;
+    }
+    $('historyList').innerHTML = HISTORY.map(function (g) {
+      var names = g.players.map(function (p) { return p.name; }).join(', ');
+      var head = g.winner ? ('🏆 ' + g.winner + (g.winnerAvg != null ? ' · ' + fmtSec(g.winnerAvg) + ' с' : '')) : names;
+      var tags = [];
+      if (g.solo) tags.push('соло'); if (g.lives) tags.push(g.lives + '♥'); if (g.tasks) tags.push('задания');
+      if (g.proper) tags.push('имена'); if (g.anyPos) tags.push('любые слова');
+      var rows = g.players.map(function (p) {
+        return '<div><span class="pdot" style="background:' + p.color + '"></span><b>' + esc(p.name) + '</b> — ' +
+          (p.words ? fmtSec(p.avg) + ' с · ' + p.words + ' сл.' : 'без слов') +
+          (p.bonus ? ' · 🎯' + p.bonus : '') + (p.out ? ' · выбыл' : '') + '</div>';
+      }).join('');
+      var top = g.top ? '<div style="margin-top:4px">Длиннее всех: <b>' + esc(cap(g.top.word)) + '</b> · ' + esc(g.top.player) + '</div>' : '';
+      var tagHtml = tags.length ? '<div style="margin-bottom:4px">' + tags.map(function (t) { return '<span class="gtag">' + t + '</span>'; }).join('') + '</div>' : '';
+      return '<div class="gitem"><div class="gh">' +
+        '<span class="gd">' + fmtDate(g.t) + '</span>' +
+        '<span class="gw">' + esc(head) + '</span>' +
+        '<span class="gm">' + g.totalWords + ' сл.</span><span class="arr">›</span></div>' +
+        '<div class="gb">' + tagHtml + rows + top + '</div></div>';
+    }).join('');
   }
 
   /* ============ ПРОДОЛЖЕНИЕ РАУНДА ============ */
@@ -690,6 +750,10 @@
     $('customBtn').addEventListener('click', function () { renderCustom(); show('custom'); });
     $('customBack').addEventListener('click', function () { renderSetup(); show('setup'); });
     $('customList').addEventListener('click', function (e) { var w = e.target.getAttribute('data-cw'); if (w !== null) { CUSTOM.delete(w); saveCustom(); renderCustom(); } });
+    $('historyBtn').addEventListener('click', function () { renderHistory(); show('history'); });
+    $('historyBack').addEventListener('click', function () { renderSetup(); show('setup'); });
+    $('clearHistory').addEventListener('click', function () { HISTORY = []; saveHistory(); renderHistory(); });
+    $('historyList').addEventListener('click', function (e) { var it = e.target.closest ? e.target.closest('.gitem') : null; if (it) it.classList.toggle('open'); });
 
     $('startBtn').addEventListener('click', function () { newGame(); });
     $('send').addEventListener('click', submitWord);
