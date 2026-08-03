@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '9';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '10';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -782,6 +782,30 @@
     }).join('') : '<div class="empty">Пока пусто. Слова попадают сюда, когда ты жмёшь «Всё равно засчитать» на неизвестном слове.</div>';
   }
 
+  /* ============ СПРАВОЧНИК СЛОВ ============ */
+  var REF_CATS = [{ v: 'freq', t: 'Частые' }, { v: 'full', t: 'Все слова' }, { v: 'proper', t: 'Имена, города' }];
+  var refCat = 'freq', refLetter = '';
+  function renderRef() {
+    if (!dictReady) { $('refWords').innerHTML = '<div class="empty">Словарь ещё грузится…</div>'; return; }
+    $('refCats').innerHTML = REF_CATS.map(function (c) {
+      return '<button class="chip' + (refCat === c.v ? ' on' : '') + '" data-cat="' + c.v + '">' + c.t + '</button>';
+    }).join('');
+    var lets = Dict.letters(refCat);
+    if (lets.indexOf(refLetter) === -1) refLetter = lets[0] || 'а';
+    $('refLetters').innerHTML = lets.map(function (L) {
+      return '<button class="' + (L === refLetter ? 'on' : '') + '" data-let="' + L + '">' + L + '</button>';
+    }).join('');
+    var res = Dict.browse(refCat, refLetter, 400);
+    $('refCount').textContent = 'Буква «' + refLetter.toUpperCase() + '» · ' + res.total + ' ' +
+      plural(res.total, 'слово', 'слова', 'слов') + (res.shown < res.total ? ' · показаны первые ' + res.shown : '');
+    var html = res.words.map(function (w) {
+      return '<span class="rw' + (MEM.has(w) ? ' used' : '') + '">' + esc(cap(Dict.display(w))) + '</span>';
+    }).join('');
+    if (res.shown < res.total) html += '<div class="more">…ещё ' + (res.total - res.shown) + ' — тут только начало алфавита</div>';
+    $('refWords').innerHTML = html || '<div class="empty">Нет слов на эту букву.</div>';
+    $('refWords').parentNode.scrollTop = 0;
+  }
+
   /* ============ ИСТОРИЯ ИГР ============ */
   var MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
   function fmtDate(t) {
@@ -903,6 +927,10 @@
     $('customList').addEventListener('click', function (e) { var w = e.target.getAttribute('data-cw'); if (w !== null) { CUSTOM.delete(w); saveCustom(); renderCustom(); } });
     $('historyBtn').addEventListener('click', function () { renderHistory(); show('history'); });
     $('historyBack').addEventListener('click', function () { renderSetup(); show('setup'); });
+    $('refBtn').addEventListener('click', function () { renderRef(); show('ref'); });
+    $('refBack').addEventListener('click', function () { renderSetup(); show('setup'); });
+    $('refCats').addEventListener('click', function (e) { var c = e.target.getAttribute('data-cat'); if (c) { refCat = c; renderRef(); } });
+    $('refLetters').addEventListener('click', function (e) { var L = e.target.getAttribute('data-let'); if (L) { refLetter = L; renderRef(); } });
     $('clearHistory').addEventListener('click', function () { HISTORY = []; saveHistory(); renderHistory(); });
     $('historyList').addEventListener('click', function (e) { var it = e.target.closest ? e.target.closest('.gitem') : null; if (it) it.classList.toggle('open'); });
 

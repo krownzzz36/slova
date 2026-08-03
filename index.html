@@ -219,6 +219,18 @@
   .ob-link{display:block; margin:8px auto 0; background:transparent; border:0; color:var(--accent); font-weight:700; font-size:14px; cursor:pointer; font-family:inherit; min-height:44px}
   @media (prefers-reduced-motion: reduce){ .ob-t,.ob-arr{animation:none; opacity:1} .ob-q .cur{animation:none} }
 
+  /* ---------- справочник ---------- */
+  .reflet{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px}
+  .reflet button{width:40px; height:40px; border:1px solid var(--line); background:var(--card); color:var(--text);
+                 border-radius:10px; font-size:17px; font-weight:800; text-transform:uppercase; cursor:pointer; font-family:inherit}
+  .reflet button.on{border-color:var(--accent); color:var(--accent); border-width:2px}
+  .refcount{font-size:12px; color:var(--muted); margin:2px 2px 8px}
+  .refwords{display:flex; flex-wrap:wrap; gap:7px; padding-bottom:8px}
+  .refwords .rw{background:var(--card); border:1px solid var(--line); border-radius:11px; padding:8px 12px;
+                font-size:15px; font-weight:600; color:var(--text)}
+  .refwords .rw.used{color:var(--muted); text-decoration:line-through; opacity:.6; font-weight:500}
+  .refwords .more{color:var(--muted); font-size:13px; padding:8px 4px; width:100%}
+
   /* ---------- история игр ---------- */
   #history h2{font-size:24px; font-weight:800; margin:16px 0 4px}
   .gitem{background:var(--card); border:1px solid var(--line); border-radius:14px; margin-bottom:8px; overflow:hidden}
@@ -458,6 +470,9 @@
       <button class="rowbtn" id="customBtn" style="margin-top:8px">
         <b>Свои слова</b><span class="mini" id="customCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
       </button>
+      <button class="rowbtn" id="refBtn" style="margin-top:8px">
+        <b>📖 Справочник слов</b><span class="mini" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
+      </button>
       <button class="rowbtn" id="historyBtn" style="margin-top:8px">
         <b>История игр</b><span class="mini" id="historyCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
       </button>
@@ -582,6 +597,20 @@
   </div>
 </section>
 
+<!-- ================= СПРАВОЧНИК ================= -->
+<section id="ref" class="screen">
+  <div class="wrap">
+    <h2 style="font-size:24px;font-weight:800;margin:16px 0 8px">📖 Справочник слов</h2>
+    <div class="chips" id="refCats" style="margin-bottom:8px"></div>
+    <div class="reflet" id="refLetters"></div>
+    <div class="refcount" id="refCount"></div>
+    <div class="scroll"><div class="refwords" id="refWords"></div></div>
+    <div style="padding:6px 0 14px">
+      <button class="btn ghost" id="refBack">Назад</button>
+    </div>
+  </div>
+</section>
+
 <!-- ================= ОНБОРДИНГ ================= -->
 <div class="ob-ov" id="onboard">
   <div class="ob-card">
@@ -602,13 +631,13 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=9" defer></script>
-<script src="src/morph.js?v=9" defer></script>
-<script src="src/dict.js?v=9" defer></script>
-<script src="src/stats.js?v=9" defer></script>
-<script src="src/storage.js?v=9" defer></script>
-<script src="src/sharecard.js?v=9" defer></script>
-<script src="src/ui.js?v=9" defer></script>
+<script src="src/rules.js?v=10" defer></script>
+<script src="src/morph.js?v=10" defer></script>
+<script src="src/dict.js?v=10" defer></script>
+<script src="src/stats.js?v=10" defer></script>
+<script src="src/storage.js?v=10" defer></script>
+<script src="src/sharecard.js?v=10" defer></script>
+<script src="src/ui.js?v=10" defer></script>
 
 <!-- «Живая литера»: орнамент хохломы в сцене + split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>

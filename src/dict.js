@@ -105,9 +105,41 @@
     return null;
   }
 
+  // ---- Справочник: обзор словаря по буквам и категориям ----
+  var RU = 'абвгдежзийклмнопрстуфхцчшщэюяё';
+  function catSource(cat) {
+    if (cat === 'proper') return [names, geo];
+    if (cat === 'full') return [full];
+    return null; // 'freq' обрабатываем отдельно (это массив)
+  }
+  function letters(cat) {
+    var present = {};
+    if (cat === 'freq') { for (var i = 0; i < freq.length; i++) present[freq[i][0]] = 1; }
+    else { catSource(cat).forEach(function (s) { if (s) s.forEach(function (w) { present[w[0]] = 1; }); }); }
+    var out = [];
+    for (var j = 0; j < RU.length; j++) if (present[RU[j]]) out.push(RU[j]);
+    return out;
+  }
+  function browse(cat, letter, cap) {
+    cap = cap || 400;
+    var out = [], total = 0;
+    if (cat === 'freq') {
+      var arr = freq.filter(function (w) { return w[0] === letter; }).sort();
+      total = arr.length; out = arr.slice(0, cap);
+    } else {
+      catSource(cat).forEach(function (s) {
+        if (s) s.forEach(function (w) { if (w[0] === letter) { total++; if (out.length < cap) out.push(w); } });
+      });
+      out.sort();
+    }
+    return { words: out, total: total, shown: out.length };
+  }
+
   var api = {
     expand: expand,
     build: build,
+    letters: letters,
+    browse: browse,
     has: has,
     hasOther: hasOther,
     hasName: hasName,
