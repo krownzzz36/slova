@@ -34,7 +34,7 @@
   .btn:active:not(:disabled){transform:scale(.985)}
   .btn.soft{background:var(--card); color:var(--text); border:1px solid var(--line); font-size:15px; padding:13px; font-weight:600; min-height:52px}
   .btn.soft.accent{border-color:var(--accent); color:var(--accent)}
-  .btn.ghost{background:transparent; color:var(--muted); font-weight:600; font-size:15px; padding:12px; min-height:auto}
+  .btn.ghost{background:transparent; color:var(--muted); font-weight:600; font-size:15px; padding:12px; min-height:44px}
   .hint{color:var(--muted); font-size:13px; line-height:1.5}
   .sect{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; font-weight:700; margin:18px 0 8px}
 
@@ -46,7 +46,7 @@
   .prow{display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--line);
         border-radius:16px; padding:12px 14px; box-shadow:var(--shadow); margin-bottom:8px}
   .prow input{flex:1; border:0; background:transparent; color:var(--text); font-size:17px; font-weight:600; outline:none; min-width:0; font-family:inherit}
-  .prow .del{border:0;background:transparent;color:var(--muted);font-size:20px;padding:0 2px;cursor:pointer;line-height:1;flex:none}
+  .prow .del{border:0;background:transparent;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;flex:none;width:44px;height:44px;display:flex;align-items:center;justify-content:center;margin:-8px -8px -8px 0}
   .addp{border:1px dashed var(--line); background:transparent; color:var(--muted); border-radius:16px;
         padding:13px; width:100%; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; min-height:48px}
   .chips{display:flex; gap:8px; flex-wrap:wrap}
@@ -90,8 +90,11 @@
   .stage{background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow);
          padding:14px 16px 16px; text-align:center; margin-bottom:10px; position:relative; overflow:hidden}
   .bar{position:absolute;left:0;top:0;height:3px;background:var(--accent);width:0%;transition:width .1s linear}
-  .turn{font-size:15px; color:var(--muted)}
+  .turn{font-size:16px; color:var(--muted); display:flex; align-items:center; justify-content:center; gap:8px}
   .turn b{color:var(--text)}
+  .avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex:none}
+  @keyframes turnpop{0%{transform:scale(.85);opacity:.3}100%{transform:scale(1);opacity:1}}
+  .turn.pop{animation:turnpop .32s ease}
   .series{position:absolute; right:12px; top:10px; font-size:12px; font-weight:700; color:var(--warn); opacity:0; transition:opacity .2s}
   .series.on{opacity:1}
   .letter{font-size:72px; font-weight:800; line-height:1; letter-spacing:-2px; margin:2px 0 2px; color:var(--accent)}
@@ -128,8 +131,8 @@
   .msgwrap{min-height:46px; margin-bottom:4px}
   .msg{font-size:14px; min-height:19px; text-align:center; font-weight:600; color:var(--accent)}
   .msg.good{color:var(--ok)}
-  .override{display:none; margin:6px auto 0; border:1px solid var(--line); background:var(--card); color:var(--muted);
-            border-radius:12px; padding:8px 16px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit}
+  .override{display:none; margin:6px auto 0; border:1px solid var(--accent); background:var(--card); color:var(--accent);
+            border-radius:12px; padding:11px 18px; min-height:44px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit}
   .override.on{display:block}
 
   .hitem{display:flex; align-items:baseline; gap:9px; padding:8px 12px; background:var(--card);
@@ -183,7 +186,7 @@
   .citem{display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
          border-radius:13px; padding:11px 14px; margin-bottom:6px}
   .citem .cw{flex:1; font-size:16px; font-weight:600; text-transform:capitalize}
-  .citem .cd{border:0; background:transparent; color:var(--muted); font-size:19px; cursor:pointer; padding:0 4px}
+  .citem .cd{border:0; background:transparent; color:var(--muted); font-size:19px; cursor:pointer; width:44px; height:44px; display:flex; align-items:center; justify-content:center; margin:-8px -8px -8px 0; flex:none}
 
   /* ---------- история игр ---------- */
   #history h2{font-size:24px; font-weight:800; margin:16px 0 4px}
@@ -254,6 +257,10 @@
         <div class="tt"><b>Пропускать «й»</b><span>после «трамвай» — сразу на «а»</span></div>
         <div class="sw" id="jSw"><i></i></div>
       </div>
+      <div class="toggle">
+        <div class="tt"><b>🔊 Озвучивать слова</b><span>читать принятое слово вслух — для тех, кто ещё не читает</span></div>
+        <div class="sw" id="speakSw"><i></i></div>
+      </div>
 
       <div class="sect">Подсказки и поблажки</div>
       <div class="chips" id="hintLimits"></div>
@@ -294,10 +301,10 @@
       <div class="scores" id="scores"></div>
     </div>
 
-    <div class="stage">
+    <div class="stage" id="stage">
       <div class="bar" id="bar"></div>
       <div class="series" id="series"></div>
-      <div class="turn">Ходит <b id="turnName"></b></div>
+      <div class="turn" id="turnRow"><span class="avatar" id="turnAvatar"></span><span>Ходит <b id="turnName"></b></span></div>
       <div class="letter" id="letter">·</div>
       <div class="clock" id="clock">0,0 с</div>
       <div class="prev" id="prev"></div>

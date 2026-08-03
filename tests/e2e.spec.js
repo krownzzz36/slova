@@ -33,7 +33,7 @@ test('РРРР не проходит без ручного зачёта, пот�
   await boot(page);
   await page.click('#startBtn');
   await type(page, 'рррр');
-  await expect(page.locator('#msg')).toHaveText('Не знаю такого слова');
+  await expect(page.locator('#msg')).toHaveText('Не нашёл такого слова — проверим?');
   await expect(page.locator('#overrideBtn')).toHaveClass(/on/);
   await page.click('#overrideBtn');
   await expect(letter(page)).resolves.toBe('Р');    // принято вручную
@@ -43,7 +43,7 @@ test('глагол — внятная причина', async ({ page }) => {
   await boot(page);
   await page.click('#startBtn');
   await type(page, 'бежать');
-  await expect(page.locator('#msg')).toHaveText('Только существительные и прилагательные');
+  await expect(page.locator('#msg')).toHaveText('Пока берём только существительные и прилагательные');
 });
 
 test('форма слова — подсказка правильной формы', async ({ page }) => {

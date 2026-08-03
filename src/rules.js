@@ -43,19 +43,19 @@
     return nk.length >= 5 && /(о|е)$/.test(nk) && /(ически|ально|ежно|ущно)/.test(nk);
   }
 
-  // Сообщения игроку (единый тон, ТЗ §7).
+  // Сообщения игроку — дружелюбный тон, не судейский (ТЗ §7 / UX-ТЗ Задача 4).
   var MSG = {
     not_cyrillic: 'Только русские буквы',
-    too_short: 'Слишком короткое',
+    too_short: 'Слишком короткое слово',
     wrong_letter: function (L) { return 'Нужно слово на «' + L.toUpperCase() + '»'; },
-    unknown: 'Не знаю такого слова',
-    wrong_form: function (w) { return 'Это форма слова «' + w + '». Скажи «' + w + '»'; },
-    wrong_pos: 'Только существительные и прилагательные',
-    proper_off: 'Имена и города выключены в настройках',
+    unknown: 'Не нашёл такого слова — проверим?',
+    wrong_form: function (w) { return 'Это форма слова «' + w + '» — скажи «' + w + '»'; },
+    wrong_pos: 'Пока берём только существительные и прилагательные',
+    proper_off: 'Имена и города сейчас выключены',
     repeat: 'Это слово уже было',
     repeat_lemma: function (w) { return 'Уже было — «' + w + '»'; },
-    same_root: function (w) { return 'Однокоренное с «' + w + '»'; },
-    dead_end: 'Тупик — букву меняем'
+    same_root: function (w) { return 'Похоже на «' + w + '» — однокоренное'; },
+    dead_end: 'На эту букву слов не осталось — меняем'
   };
 
   /* Главная проверка хода. state:
@@ -107,7 +107,7 @@
       var owner = state.usedRoots[root];
       if (owner !== nk) {
         var rr = fail('same_root', MSG.same_root(owner), true);
-        rr.root = root;
+        rr.root = root; rr.suggestion = owner;
         return rr;
       }
     }

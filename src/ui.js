@@ -16,13 +16,15 @@
   var LIVES = [{ v: 0, t: 'выкл' }, { v: 3, t: '3 ♥' }, { v: 5, t: '5 ♥' }];
 
   var CFG = { names: ['Игрок 1', 'Игрок 2'], limit: 0, memory: false, strictRoots: true,
-    skipJ: true, hintLimit: 3, proper: false, anyPos: false, lives: 0, kids: false, tasks: false };
+    skipJ: true, hintLimit: 3, proper: false, anyPos: false, lives: 0, kids: false, tasks: false, speak: false };
   var MEM = new Set();                 // копилка (нормализованные ключи)
   var CUSTOM = new Set();              // свои слова (проходят проверку всегда)
   var HISTORY = [];                    // сыгранные партии (новые сверху)
   var G = null;
   var dictReady = false, dictDegraded = false;
-  var timerId = null, turnStart = 0, warned = false, paused = false;
+  var timerId = null, turnStart = 0, warned = false, paused = false, lastTurn = -1;
+  var REDUCE_MOTION = false;
+  try { REDUCE_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
 
   /* ---------- утилиты ---------- */
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -121,6 +123,7 @@
     $('rootSw').classList.toggle('on', CFG.strictRoots);
     $('jSw').classList.toggle('on', CFG.skipJ);
     $('tasksSw').classList.toggle('on', CFG.tasks);
+    $('speakSw').classList.toggle('on', CFG.speak);
     $('memSw').classList.toggle('on', CFG.memory);
     memInfo();
     $('customCount').textContent = CUSTOM.size ? ('  ' + CUSTOM.size) : '';
@@ -130,8 +133,24 @@
   // Детский режим — пресет прощающих настроек (ТЗ: чтобы ребёнок разобрался).
   function applyKids(on) {
     CFG.kids = on;
-    if (on) { CFG.limit = 0; CFG.hintLimit = Infinity; CFG.lives = 0; CFG.strictRoots = false; CFG.skipJ = true; CFG.anyPos = false; CFG.tasks = false; }
+    if (on) { CFG.limit = 0; CFG.hintLimit = Infinity; CFG.lives = 0; CFG.strictRoots = false; CFG.skipJ = true; CFG.anyPos = false; CFG.tasks = false; CFG.speak = true; }
     $('tasksSw').classList.toggle('on', CFG.tasks);
+    $('speakSw').classList.toggle('on', CFG.speak);
+  }
+
+  /* ---------- озвучка слова (TTS) — вывод, не путать с микрофоном (ввод) ---------- */
+  var TTS = (typeof window !== 'undefined') ? window.speechSynthesis : null;
+  function speak(text) {
+    if (!CFG.speak || !TTS || paused || !text) return;
+    try {
+      TTS.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ru-RU'; u.rate = 0.95;
+      var voices = TTS.getVoices() || [];
+      var ru = voices.filter(function (v) { return /ru/i.test(v.lang); })[0];
+      if (ru) u.voice = ru;
+      TTS.speak(u);
+    } catch (e) {}
   }
   function memInfo() {
     $('memInfo').textContent = MEM.size
@@ -267,6 +286,7 @@
 
   /* ---------- ход ---------- */
   function accept(res, manual) {
+    speak(res.word);                       // озвучить принятое слово (если включено)
     var ms = elapsed() + G.turnPenalty;
     var nextL = Rules.nextLetter(res.key, CFG.skipJ);
     var bonus = (G.task && nextL === G.task.end) ? TASK_BONUS : 0;
@@ -279,21 +299,35 @@
     G.turn = nextTurn(G.turn);
     G.streak++;
     nextTask();
-    var msg = bonus ? ('🎯 Задание выполнено, +' + bonus) : (nx.dead ? Rules.MSG.dead_end : '');
+    var msg = bonus ? ('🎯 Задание выполнено, +' + bonus) : (nx.dead ? (CFG.kids ? KID.dead_end() : Rules.MSG.dead_end) : '');
     afterMove(msg, !!bonus);
     addHist(ev);
     checkOver();
   }
+
+  // Детская вариация сообщений (мягче/короче), маппинг reason -> текст. Дефолтные
+  // взрослые строки живут в Rules.MSG; DOM в rules.js не протекает (UX-ТЗ Задача 4).
+  var KID = {
+    unknown: function () { return 'Хм, не нашёл такого. Попробуй другое 🙂'; },
+    wrong_letter: function () { return 'Нам нужна буква «' + String(G.required || '').toUpperCase() + '»'; },
+    too_short: function () { return 'Нужно слово подлиннее'; },
+    repeat: function () { return 'Такое уже говорили!'; },
+    wrong_pos: function () { return 'Назови предмет — что это?'; },
+    wrong_form: function (res) { return 'Скажи «' + (res.suggestion || '') + '»'; },
+    same_root: function (res) { return 'Очень похоже на «' + (res.suggestion || '') + '»'; },
+    dead_end: function () { return 'Слов не осталось — меняем букву'; }
+  };
+  function moveMsg(res) { return (CFG.kids && KID[res.reason]) ? KID[res.reason](res) : res.message; }
 
   function submitWord(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (!G || paused) return;
     var res = Rules.checkMove($('word').value, state());
     if (!res.ok) {
-      setMsg(res.message);
+      setMsg(moveMsg(res));
       G.pending = res.overridable ? res : null;
       $('overrideBtn').classList.toggle('on', !!res.overridable);
-      buzz('bad');
+      buzz(res.overridable ? 'warn' : 'bad');  // мягкий намёк, не «приговор»
       return;
     }
     G.pending = null; $('overrideBtn').classList.remove('on');
@@ -397,7 +431,7 @@
       if (!w) { setMsg('Не могу подсказать'); return; }
       G.hint = { word: w, stage: 1 };
       G.hintUsedThisTurn = true;
-      p.hints++; G.turnPenalty += HINT_PENALTY_MS;  // штраф +5 с попадёт в ms хода
+      p.hints++; if (!CFG.kids) G.turnPenalty += HINT_PENALTY_MS;  // в детском — без штрафа (Задача 8)
       showMask(w, 1);
       updateHintBtn(); render(); saveResume();
     } else if (G.hint.stage === 1) {
@@ -426,7 +460,7 @@
   function updateHintBtn() {
     var p = G.players[G.turn], off = CFG.hintLimit === 0, over = p.hints >= CFG.hintLimit && !G.hintUsedThisTurn;
     $('hintBtn').disabled = off || over;
-    $('hintBtn').textContent = over ? 'Подсказки кончились' : 'Подсказка';
+    $('hintBtn').textContent = over ? 'Подсказки кончились' : '💡 Подсказка';
   }
 
   /* ---------- отрисовка ---------- */
@@ -443,7 +477,16 @@
         '<div class="n"><span class="dot" style="background:' + p.color + '"></span>' + esc(p.name) + '</div>' +
         '<div class="v">' + p.words + '</div><div class="t">' + fmtTot(p.ms) + '</div>' + hearts + bonus + '</div>';
     }).join('');
-    $('turnName').textContent = G.players[G.turn].name;
+    var cur = G.players[G.turn];
+    $('turnName').textContent = cur.name;
+    $('turnName').style.color = cur.color;
+    var av = $('turnAvatar');
+    av.textContent = (cur.name.trim()[0] || '?').toUpperCase();
+    av.style.background = cur.color;
+    if (lastTurn !== G.turn && !REDUCE_MOTION) {  // «вспышка» при смене хода
+      var tr = $('turnRow'); tr.classList.remove('pop'); void tr.offsetWidth; tr.classList.add('pop');
+    }
+    lastTurn = G.turn;
 
     var tEl = $('task');
     if (CFG.tasks && G.task) { tEl.textContent = '🎯 Закончи на «' + G.task.end.toUpperCase() + '» — +' + TASK_BONUS; tEl.classList.add('on'); }
@@ -743,6 +786,7 @@
     $('properSw').addEventListener('click', function () { CFG.proper = !CFG.proper; renderSetup(); saveCfg(); });
     $('posSw').addEventListener('click', function () { CFG.anyPos = !CFG.anyPos; renderSetup(); saveCfg(); });
     $('tasksSw').addEventListener('click', function () { CFG.tasks = !CFG.tasks; CFG.kids = false; renderSetup(); saveCfg(); });
+    $('speakSw').addEventListener('click', function () { CFG.speak = !CFG.speak; renderSetup(); saveCfg(); });
     $('rootSw').addEventListener('click', function () { CFG.strictRoots = !CFG.strictRoots; renderSetup(); saveCfg(); });
     $('jSw').addEventListener('click', function () { CFG.skipJ = !CFG.skipJ; renderSetup(); saveCfg(); });
     $('memSw').addEventListener('click', function () { CFG.memory = !CFG.memory; renderSetup(); saveCfg(); });
@@ -778,6 +822,7 @@
     // Сворачивание/гашение экрана: сохраняем и ставим на паузу, чтобы фоновое
     // время не «съедалось» (телефон в кармане на прогулке).
     document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { try { if (TTS) TTS.cancel(); } catch (e) {} }
       if (document.hidden && G && $('game').classList.contains('on')) { saveResume(); pauseGame(); }
     });
     window.addEventListener('resize', function () { if (document.querySelector('#game.on')) { var a = document.querySelector('.sc.active'); if (a && a.scrollIntoView) a.scrollIntoView({ block: 'nearest' }); } });
