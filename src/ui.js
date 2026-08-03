@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '7';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '8';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -696,13 +696,45 @@
     lines.push('Всего слов: ' + st.totalWords + (st.longestWord ? ', длиннее всех «' + cap(st.longestWord.word) + '»' : ''));
     return lines.join('\n');
   }
-  function share() {
+  function share() {  // текстовый фолбэк
     var txt = shareText();
     try {
       if (tg && tg.switchInlineQuery) { tg.switchInlineQuery(txt, ['users', 'groups']); return; }
     } catch (e) {}
     try { navigator.clipboard.writeText(txt); setMsgOver('Скопировано в буфер'); }
     catch (e) { setMsgOver('Не вышло скопировать'); }
+  }
+
+  // Картинка-цепочка: Web Share с файлом -> скачивание -> текстовый фолбэк (Задача 3).
+  function shareImage() {
+    if (typeof ShareCard === 'undefined' || !G) return share();
+    var st = Stats.compute(G.players, G.log);
+    var words = G.log.filter(function (e) { return e.type === 'word'; }).map(function (e) { return e.word; });
+    var opts = { winner: $('overTitle').textContent, sub: st.totalWords + ' сл. · ' + fmtTot(st.durationMs),
+      words: words, hardest: st.hardest ? st.hardest.letter : null };
+    var canvas;
+    try { canvas = ShareCard.draw(opts); } catch (e) { return share(); }
+    if (!canvas || !canvas.toBlob) return share();
+    canvas.toBlob(function (blob) {
+      if (!blob) return share();
+      try {
+        var file = new File([blob], 'slova.png', { type: 'image/png' });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: 'Слова — тебе на А' }).catch(function () { downloadBlob(blob); });
+          return;
+        }
+      } catch (e) {}
+      downloadBlob(blob);
+    }, 'image/png');
+  }
+  function downloadBlob(blob) {
+    try {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url; a.download = 'slova.png';
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { try { URL.revokeObjectURL(url); a.remove(); } catch (e) {} }, 1500);
+      setMsgOver('Картинка сохранена');
+    } catch (e) { share(); }
   }
   function setMsgOver(t) { var s = $('overSub'); var old = s.textContent; s.textContent = t; setTimeout(function () { s.textContent = old; }, 1500); }
 
@@ -859,7 +891,7 @@
 
     $('againKeep').addEventListener('click', function () { CFG.memory = true; saveCfg(); renderSetup(); newGame(); });
     $('againFresh').addEventListener('click', function () { CFG.memory = false; MEM.clear(); saveMem(); renderSetup(); newGame([]); });
-    $('shareBtn').addEventListener('click', share);
+    $('shareBtn').addEventListener('click', shareImage);
     $('menuBtn').addEventListener('click', function () { renderSetup(); show('setup'); });
 
     // Сворачивание/гашение экрана: сохраняем и ставим на паузу, чтобы фоновое
