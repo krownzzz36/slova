@@ -1,11 +1,11 @@
 /* Service Worker — офлайн и мгновенное повторное открытие (ТЗ 4.1.3, §9).
  * При обновлении версии игры поднять CACHE — старый кеш удалится сам. */
-var CACHE = 'slova-v5';
+var CACHE = 'slova-v6';
 var CORE = [
   './', './index.html',
-  './src/rules.js?v=5', './src/morph.js?v=5', './src/dict.js?v=5',
-  './src/stats.js?v=5', './src/storage.js?v=5', './src/ui.js?v=5',
-  './data/dict-data.js?v=5'
+  './src/rules.js?v=6', './src/morph.js?v=6', './src/dict.js?v=6',
+  './src/stats.js?v=6', './src/storage.js?v=6', './src/ui.js?v=6',
+  './data/dict-data.js?v=6'
 ];
 
 self.addEventListener('install', function (e) {
@@ -26,17 +26,34 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // чужое (telegram CDN) — как есть
-  // cache-first, игнорируя ?v= — обновляем кеш в фоне
+
+  var isNav = req.mode === 'navigate' || (req.headers.get('accept') || '').indexOf('text/html') !== -1;
+  if (isNav) {
+    // HTML — network-first: свежая версия сразу, когда онлайн; кеш — только офлайн.
+    // Так каждая правка доходит с первого захода, а игра работает без сети.
+    e.respondWith(
+      fetch(req).then(function (resp) {
+        var copy = resp.clone();
+        caches.open(CACHE).then(function (c) { c.put('./index.html', copy); });
+        return resp;
+      }).catch(function () {
+        return caches.match('./index.html', { ignoreSearch: true }).then(function (h) { return h || caches.match(req, { ignoreSearch: true }); });
+      })
+    );
+    return;
+  }
+
+  // Остальное (скрипты, словарь) — cache-first по ТОЧНОМУ url: ?v= различает версии,
+  // поэтому новая версия всегда промахивается мимо кеша и качается заново.
   e.respondWith(
-    caches.match(req, { ignoreSearch: true }).then(function (hit) {
-      var net = fetch(req).then(function (resp) {
+    caches.match(req).then(function (hit) {
+      return hit || fetch(req).then(function (resp) {
         if (resp && resp.status === 200) {
           var copy = resp.clone();
           caches.open(CACHE).then(function (c) { c.put(req, copy); });
         }
         return resp;
-      }).catch(function () { return hit; });
-      return hit || net;
+      });
     })
   );
 });
