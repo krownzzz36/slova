@@ -613,24 +613,9 @@
 <script src="data/themes.js?v=11" defer></script>
 <script src="src/ui.js?v=11" defer></script>
 
-<!-- «Живая литера»: орнамент хохломы в сцене + split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
+<!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>
 (function () {
-  // золотая веточка хохломы в углах сцены (как в концепте)
-  var stage = document.getElementById('stage');
-  if (stage && !stage.querySelector('.sprig')) {
-    var SPRIG = '<svg viewBox="0 0 86 86" width="64" height="64" aria-hidden="true">' +
-      '<path d="M14 72 C 30 52, 44 44, 74 16" fill="none" stroke="var(--warn)" stroke-width="2.4" stroke-linecap="round"/>' +
-      '<path d="M40 46 C 30 36, 30 26, 42 20 C 48 32, 50 40, 40 46 Z" fill="var(--warn)" opacity=".9"/>' +
-      '<path d="M52 34 C 44 26, 46 16, 58 12 C 62 24, 62 30, 52 34 Z" fill="var(--accent)" opacity=".85"/>' +
-      '<circle cx="72" cy="17" r="6" fill="var(--accent)"/><circle cx="63" cy="24" r="4" fill="var(--warn)"/></svg>';
-    var tl = document.createElement('div'); tl.className = 'sprig';
-    tl.style.cssText = 'top:8px;left:8px;transform:rotate(-6deg)'; tl.innerHTML = SPRIG;
-    var br = document.createElement('div'); br.className = 'sprig';
-    br.style.cssText = 'bottom:6px;right:8px;transform:rotate(174deg)'; br.innerHTML = SPRIG;
-    stage.appendChild(tl); stage.appendChild(br);
-  }
-
   function haptic() {
     try {
       var h = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback;
@@ -662,11 +647,10 @@
     var p = sp.step(dt);
     var rot = (1 - p) * -78, ty = (1 - p) * 16, sc = 0.86 + p * 0.14;
     el.style.transform = 'translateY(' + ty.toFixed(2) + 'px) scale(' + sc.toFixed(3) + ') rotateX(' + rot.toFixed(2) + 'deg)';
-    var g = Math.min(1, Math.abs(sp.v) * 0.11);
-    el.style.textShadow = '0 ' + (18 + g * 30).toFixed(0) + 'px ' + (46 + g * 52).toFixed(0) + 'px var(--glow)' +
-      (g > 0.12 ? ', 0 0 ' + (g * 42).toFixed(0) + 'px var(--glow)' : '');
+    var g = Math.min(1, Math.abs(sp.v) * 0.10);
+    el.style.textShadow = '0 ' + (14 + g * 18).toFixed(0) + 'px ' + (44 + g * 34).toFixed(0) + 'px var(--glow)';
     if (!sp.settled()) { raf(frame); }
-    else { el.style.transform = 'translateY(0) scale(1) rotateX(0)'; el.style.textShadow = '0 18px 46px var(--glow)'; ticking = false; last = 0; }
+    else { el.style.transform = 'translateY(0) scale(1) rotateX(0)'; el.style.textShadow = '0 14px 44px var(--glow)'; ticking = false; last = 0; }
   }
   function flip() {
     haptic();
