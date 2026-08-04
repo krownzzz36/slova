@@ -444,6 +444,28 @@
   .btn:not(.soft):not(.ghost){font-size:19px; padding:20px; min-height:62px; letter-spacing:0}
   /* игровые действия — заметно мельче основного, явно вторичны */
   .bottom .btn{font-size:14px; font-weight:600; color:var(--muted); min-height:44px}
+
+  /* ═══════════ ПОНЯТНОСТЬ: что можно нажать — выглядит нажимаемым ═══════════ */
+  /* навигационные строки (режимы, меню) — лёгкая карточка + стрелка, явно кликабельны */
+  .rowbtn{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:15px 16px; box-shadow:none; margin-top:8px}
+  .rowbtn .arr{color:var(--muted); font-size:20px; margin-left:auto}
+  /* настройки-тумблеры и аккордеон — лёгкая карточка */
+  .toggle{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:8px}
+  .adv-h{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:15px 16px; box-shadow:none; margin:14px 0 8px}
+  /* «добавить игрока» — пунктир = «сюда можно добавить» */
+  .addp{border:1px dashed var(--line); background:transparent; color:var(--muted); border-radius:12px}
+  /* второстепенные кнопки — контурная «таблетка»: явно кнопка, но легко */
+  .btn.soft{background:transparent; border:1px solid var(--line); color:var(--text); border-radius:12px; font-weight:600; min-height:50px}
+  .btn.soft.accent{border-color:var(--accent); color:var(--accent)}
+  /* игровые действия внизу — контурные кнопки, а не «текст» */
+  .bottom{border-top:1px solid var(--line); padding-top:12px}
+  .bottom .btn{background:transparent; border:1px solid var(--line); color:var(--text); border-radius:12px; min-height:50px; font-size:15px; font-weight:600}
+  .bottom .btn.soft.accent{border-color:var(--accent); color:var(--accent)}
+  /* сегменты (сложность/время/жизни) — контур, выбранный акцентом */
+  .chip{background:var(--card); border:1px solid var(--line); color:var(--muted); border-radius:10px; font-weight:600}
+  .chip.on{border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 9%, transparent)}
+  /* пустые плитки (пазл/уровни бота) не занимают место */
+  #dailyPlate:empty, #botLevels:empty{display:none}
 </style>
 </head>
 <body>
