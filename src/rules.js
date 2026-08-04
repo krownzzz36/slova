@@ -87,14 +87,17 @@
     // 3–4. Есть ли в словаре сущ./прил.; если нет — почему
     if (!state.has(nk)) {
       if (state.isProper && state.isProper(nk)) return fail('proper_off', MSG.proper_off, true);
-      if (state.hasOther(nk)) return fail('wrong_pos', MSG.wrong_pos, false);
+      // Часть речи — ТОЛЬКО по словарю известных глаголов/наречий (state.hasOther).
+      // Эвристику по окончаниям убрали: русские существительные сплошь на -ила/-ыла/-ла
+      // (могила, кобыла, текила), она ложно метила их глаголами. wrong_pos теперь
+      // продавливаемый — «Всё равно засчитать», чтобы никогда не застрять.
+      if (state.hasOther(nk)) return fail('wrong_pos', MSG.wrong_pos, true);
       var canon = state.suggest ? state.suggest(nk) : null;
       if (canon && canon !== nk) {
         var r = fail('wrong_form', MSG.wrong_form(canon), false);
         r.suggestion = canon;
         return r;
       }
-      if (looksLikeVerb(nk) || looksLikeAdverb(nk)) return fail('wrong_pos', MSG.wrong_pos, false);
       // похоже на опечатку? предложить исправление (первая буква не меняется)
       var fix = state.correct ? state.correct(nk) : null;
       if (fix && fix.key !== nk) {

@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '23';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '25';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -611,7 +611,7 @@
   function override() {
     if (!G || paused || !G.pending) return;
     var res = G.pending;
-    if (res.reason === 'unknown' || res.reason === 'typo') { CUSTOM.add(res.key); saveCustom(); }
+    if (res.reason === 'unknown' || res.reason === 'typo' || res.reason === 'wrong_pos') { CUSTOM.add(res.key); saveCustom(); }
     // для «настоящего» хода нужен корректный root/letter
     res.root = Morph.rootKey(res.key);
     G.pending = null; $('overrideBtn').classList.remove('on'); $('fixBtn').classList.remove('on');

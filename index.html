@@ -351,7 +351,7 @@
   .turn b{color:var(--text); font-weight:700}
   .letter{
     font-family:var(--display); font-weight:800;
-    font-size:clamp(120px, 34vw, 200px); line-height:.84; letter-spacing:-2px; margin:6px 0 2px;
+    font-size:clamp(116px, 32vw, 188px); line-height:1.0; letter-spacing:-2px; margin:16px 0 4px;
     color:var(--accent); text-shadow:0 14px 44px var(--glow);
     transform-origin:center; backface-visibility:hidden; will-change:transform, text-shadow;
   }
@@ -430,8 +430,8 @@
   .sc.active .n, .sc.active .v{color:var(--accent)}
 
   /* цепочка слов — на линии, без рамки */
-  .hitem{background:transparent; border:none; border-bottom:1px solid var(--line); border-radius:0; padding:12px 2px}
-  .hitem.pass{border-bottom-style:dashed}
+  .hitem{background:transparent; border:0; border-bottom:1px solid var(--line); border-radius:0; padding:12px 2px}
+  .hitem.pass{border:0; border-bottom:1px dashed var(--line)}
 
   /* больше воздуха между секциями */
   .sect{margin:26px 0 10px}
@@ -778,16 +778,16 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=23" defer></script>
-<script src="src/morph.js?v=23" defer></script>
-<script src="src/dict.js?v=23" defer></script>
-<script src="src/stats.js?v=23" defer></script>
-<script src="src/storage.js?v=23" defer></script>
-<script src="src/sharecard.js?v=23" defer></script>
-<script src="src/score.js?v=23" defer></script>
-<script src="src/bot.js?v=23" defer></script>
-<script src="data/themes.js?v=23" defer></script>
-<script src="src/ui.js?v=23" defer></script>
+<script src="src/rules.js?v=25" defer></script>
+<script src="src/morph.js?v=25" defer></script>
+<script src="src/dict.js?v=25" defer></script>
+<script src="src/stats.js?v=25" defer></script>
+<script src="src/storage.js?v=25" defer></script>
+<script src="src/sharecard.js?v=25" defer></script>
+<script src="src/score.js?v=25" defer></script>
+<script src="src/bot.js?v=25" defer></script>
+<script src="data/themes.js?v=25" defer></script>
+<script src="src/ui.js?v=25" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>

@@ -59,6 +59,10 @@ test('приём слова: буква и часть речи', () => {
   assert.equal(check('зонт', { required: 'а' }).reason, 'wrong_letter');
   assert.equal(check('бежать', { required: 'б' }).reason, 'wrong_pos');
   assert.equal(check('быстро', { required: 'б' }).reason, 'wrong_pos');
+  assert.equal(check('бежать', { required: 'б' }).overridable, true); // теперь продавливаемо
+  // существительные на -ила/-ыла больше НЕ считаются глаголами (была ложная эвристика)
+  assert.equal(check('тортила', { required: 'т' }).reason, 'unknown');
+  assert.equal(check('кобылка', { required: 'к' }).reason !== 'wrong_pos', true);
 });
 
 test('приём слова: формы и подсказки', () => {
