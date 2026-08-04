@@ -435,6 +435,15 @@
 
   /* больше воздуха между секциями */
   .sect{margin:26px 0 10px}
+
+  /* ═══════════ UX: одно очевидное действие на экране ═══════════ */
+  /* акцент — только у главного действия; второстепенное нейтрально */
+  .btn.soft.accent{color:var(--text)}
+  #howToBtn{color:var(--muted); font-weight:600}
+  /* главная кнопка — крупнее и однозначно «та самая» */
+  .btn:not(.soft):not(.ghost){font-size:19px; padding:20px; min-height:62px; letter-spacing:0}
+  /* игровые действия — заметно мельче основного, явно вторичны */
+  .bottom .btn{font-size:14px; font-weight:600; color:var(--muted); min-height:44px}
 </style>
 </head>
 <body>
