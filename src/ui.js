@@ -2,10 +2,11 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '13';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '14';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
+  var DAILY_SECONDS = 60;              // длительность дневного пазла (таймер-атака)
 
   var $ = function (id) { return document.getElementById(id); };
   var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
@@ -21,7 +22,7 @@
   var MEM = new Set();                 // копилка (нормализованные ключи)
   var CUSTOM = new Set();              // свои слова (проходят проверку всегда)
   var HISTORY = [];                    // сыгранные партии (новые сверху)
-  var DAILY = { last: null, streak: 0 };  // серия дней (день-стрик)
+  var DAILY = { last: null, streak: 0, bestScore: 0, bestDate: null };  // серия дней + рекорд дневного пазла
   var G = null;
   var dictReady = false, dictDegraded = false;
   var timerId = null, turnStart = 0, warned = false, paused = false, lastTurn = -1;
@@ -65,7 +66,7 @@
     Storage.getList('memory', function (arr) { arr.forEach(function (w) { MEM.add(w); }); done(); });
     Storage.getList('custom', function (arr) { arr.forEach(function (w) { CUSTOM.add(w); }); done(); });
     Storage.getList('history', function (arr) { HISTORY = (arr || []).filter(function (g) { return g && g.t; }); done(); });
-    Storage.get('daily', function (v) { if (v && typeof v === 'object') DAILY = { last: v.last || null, streak: v.streak || 0 }; done(); });
+    Storage.get('daily', function (v) { if (v && typeof v === 'object') DAILY = { last: v.last || null, streak: v.streak || 0, bestScore: v.bestScore || 0, bestDate: v.bestDate || null }; done(); });
   }
 
   /* ---------- дневной крючок (буква дня + серия дней), офлайн, детерминированно ---------- */
@@ -88,11 +89,12 @@
   }
   function renderDaily() {
     var L = letterOfDay().toUpperCase();
-    var done = DAILY.last === todayStr();
+    var today = todayStr();
+    var playedToday = DAILY.bestDate === today && DAILY.bestScore > 0;
     var streak = DAILY.streak || 0;
     $('dailyPlate').innerHTML =
       '<span class="dl">Буква дня<b>' + L + '</b></span>' +
-      '<span class="dr">' + (done ? 'сегодня сыграно ✓' : 'сыграй сегодня') +
+      '<span class="dr">' + (playedToday ? ('рекорд ' + DAILY.bestScore + ' очк. ✓') : 'таймер-атака') +
       (streak > 1 ? '<br>🔥 ' + streak + ' ' + plural(streak, 'день', 'дня', 'дней') + ' подряд' : '') + '</span>';
   }
   function saveCfg() { var c = {}; for (var k in CFG) c[k] = (CFG[k] === Infinity ? null : CFG[k]); Storage.set('cfg', c); }
@@ -100,7 +102,7 @@
   function saveCustom() { Storage.setList('custom', Array.from(CUSTOM)); }
   function saveHistory() { Storage.setList('history', HISTORY.slice(0, 50)); }
   function saveResume() {
-    if (!G) return;
+    if (!G || G.daily) return;           // дневной пазл не продолжаем (таймер-атака)
     Storage.set('resume', {
       players: G.players, turn: G.turn, required: G.required, lastWord: G.lastWord,
       log: G.log.map(function (e) { return { type: e.type, player: e.player, ms: e.ms, word: e.word, key: e.key, root: e.root, letter: e.letter, manual: e.manual, hinted: e.hinted }; }),
@@ -125,7 +127,7 @@
   }
   function degrade() { dictDegraded = true; dictReady = false; status('офлайн — мягкая проверка слов'); }
   function status(html) { $('dictStatus').innerHTML = html; }
-  function enableStart() { $('startBtn').disabled = false; $('kidsBtn').disabled = false; $('botBtn').disabled = false; }
+  function enableStart() { $('startBtn').disabled = false; $('kidsBtn').disabled = false; $('botBtn').disabled = false; $('dailyBtn').disabled = false; }
 
   /* ============ ЭКРАН СТАРТА ============ */
   function renderSetup() {
@@ -231,6 +233,27 @@
     if (G.players[G.turn] && G.players[G.turn].bot) botTurn(); else focusInput();
   }
 
+  // Дневной пазл (Задача 6): соло таймер-атака на «букву дня». Seed от даты у всех
+  // одинаков -> счёт сравним. Одна общая минута на всю цепочку.
+  function startDaily() {
+    if (!dictReady) return;
+    var human = (CFG.names[0] || '').trim() || 'Ты';
+    MEM.clear();
+    G = {
+      players: [{ name: human, color: COLORS[0], hints: 0, swaps: 0, bot: false }],
+      turn: 0, required: letterOfDay(), lastWord: null, deadEnd: false,
+      memBase: new Set(), used: new Set(), usedRoots: {}, usedFirstCount: {},
+      log: [], streak: 0, turnPenalty: 0, task: null, over: false,
+      hint: null, hintUsedThisTurn: false, pending: null,
+      daily: true, dailyDeadline: Date.now() + DAILY_SECONDS * 1000
+    };
+    syncDerived();
+    $('hist').innerHTML = '<div class="empty">Набирай цепочку на «' + letterOfDay().toUpperCase() +
+      '». Успей за ' + DAILY_SECONDS + ' сек!</div>';
+    $('word').value = ''; setMsg(''); hideMask(); hidePause();
+    show('game'); render(); startClock(); focusInput();
+  }
+
   // Пересчёт производных из memBase + log (устойчиво к отмене): used/roots + счётчики
   // игроков (слова, время, пасы, таймауты, бонусы, жизни, выбывание).
   function syncDerived() {
@@ -283,7 +306,7 @@
   }
   // случайная достижимая буква для задания «закончи на …»
   function nextTask() {
-    if (!CFG.tasks || !dictReady) { G.task = null; return; }
+    if (!CFG.tasks || !dictReady || (G && G.daily)) { G.task = null; return; }
     var pool = 'абвгдежзиклмнопрстуфхцчшэюя'.split('');
     for (var tries = 0; tries < 20; tries++) {
       var L = pool[Math.floor(Math.random() * pool.length)];
@@ -307,12 +330,23 @@
   function unpause() {
     if (!paused) return;
     paused = false; $('pauseOv').classList.remove('on');
-    turnStart += (Date.now() - pauseStart); // «съеденное» паузой время не считаем
+    var gap = Date.now() - pauseStart;
+    turnStart += gap;                    // «съеденное» паузой время не считаем
+    if (G && G.daily) G.dailyDeadline += gap;  // дневной дедлайн тоже сдвигаем
     startClock();
     if (G && G.players[G.turn] && G.players[G.turn].bot) botTurn(); else focusInput();
   }
   function hidePause() { paused = false; $('pauseOv').classList.remove('on'); }
   function tick() {
+    if (G && G.daily) {                  // дневной пазл: общий обратный отсчёт
+      var rem = Math.max(0, G.dailyDeadline - Date.now());
+      $('clock').textContent = fmtSec(rem) + ' с';
+      var total = DAILY_SECONDS * 1000;
+      $('bar').style.width = Math.min(100, (1 - rem / total) * 100) + '%';
+      if (rem <= 5000 && rem > 0 && !warned) { warned = true; buzz('warn'); }
+      if (rem <= 0) finish();
+      return;
+    }
     var ms = elapsed();
     $('clock').textContent = fmtSec(ms) + ' с';
     if (CFG.limit) {
@@ -606,7 +640,7 @@
   }
   function render() {
     $('scores').innerHTML = G.players.map(function (p, i) {
-      var hearts = CFG.lives ? '<div class="hearts">' + heartStr(p) + '</div>' : '';
+      var hearts = (CFG.lives && !G.daily) ? '<div class="hearts">' + heartStr(p) + '</div>' : '';
       var bonus = (CFG.tasks && p.bonus) ? '<div class="bonus">🎯 ' + p.bonus + '</div>' : '';
       return '<div class="sc' + (i === G.turn ? ' active' : '') + (p.out ? ' out' : '') + '">' +
         '<div class="n"><span class="dot" style="background:' + p.color + '"></span>' + esc(p.name) + '</div>' +
@@ -629,6 +663,8 @@
     else tEl.classList.remove('on');
 
     var sp = G.players[G.turn];
+    $('passBtn').style.display = G.daily ? 'none' : '';
+    $('swapBtn').style.display = G.daily ? 'none' : '';
     $('swapBtn').disabled = sp.swaps <= 0 || !G.required;
     $('swapBtn').textContent = 'Сменить букву' + (sp.swaps > 0 ? ' (' + sp.swaps + ')' : '');
 
@@ -692,22 +728,36 @@
   function finish() {
     stopClock(); stopMic(); hidePause();
     if (botTimer) { clearTimeout(botTimer); botTimer = null; }
+    var isDaily = !!(G && G.daily);
     var totalWords = G.players.reduce(function (s, p) { return s + p.words; }, 0);
     clearResume();
     if (CFG.memory) saveMem(); saveCustom();
-    if (!totalWords) { renderSetup(); show('setup'); return; } // пустой раунд — на старт (ТЗ 4.6)
-    bumpStreak();  // засчитать день в серию (Задача 6)
+    if (!totalWords && !isDaily) { renderSetup(); show('setup'); return; } // пустой раунд — на старт (ТЗ 4.6)
+    if (totalWords) bumpStreak();  // засчитать день в серию (Задача 6)
 
     var st = Stats.compute(G.players, G.log);
     var top = st.topScorer, maxS = st.maxScore;
     var solo = G.players.length === 1;
+    // рекорд дневного пазла (сброс при смене даты)
+    var dailyInfo = null;
+    if (isDaily) {
+      var td = todayStr();
+      if (DAILY.bestDate !== td) { DAILY.bestScore = 0; DAILY.bestDate = td; }
+      var dscore = st.totalScore, isRec = dscore > (DAILY.bestScore || 0);
+      if (isRec) { DAILY.bestScore = dscore; DAILY.bestDate = td; }
+      Storage.set('daily', DAILY);
+      dailyInfo = { score: dscore, isRec: isRec, best: DAILY.bestScore };
+    }
     // победа по выживанию (с жизнями) приоритетнее очков; иначе — по очкам
     var survivor = null;
     if (CFG.lives && !solo) { var alive = G.players.filter(function (p) { return !p.out; }); if (alive.length === 1) survivor = alive[0]; }
     var winnerI = survivor ? G.players.indexOf(survivor) : (top ? top.i : -1);
     var winScore = winnerI >= 0 ? (st.players[winnerI].score || 0) : 0;
 
-    if (solo) {
+    if (isDaily) {
+      $('overTitle').textContent = '🗓️ Дневной пазл — ' + dailyInfo.score + ' очк.';
+      $('overSub').textContent = dailyInfo.isRec ? '🏅 новый рекорд дня!' : ('рекорд дня ' + dailyInfo.best + ' очк.');
+    } else if (solo) {
       $('overTitle').textContent = 'Твой результат';
       $('overSub').textContent = top ? (winScore + ' очк. · ' + top.words + ' сл.') : '';
     } else if (survivor) {
@@ -732,7 +782,7 @@
     }).join('');
 
     renderBreakdown(st);
-    recordHistory(st, winnerI, solo);
+    if (totalWords) recordHistory(st, winnerI, solo);
     $('againKeep').textContent = 'Ещё раз — помнить ' + MEM.size + ' сл.';
     show('over');
   }
@@ -742,7 +792,7 @@
     var wp = st.players[winnerI];
     var rec = {
       t: Date.now(),
-      solo: solo, lives: CFG.lives, tasks: CFG.tasks, proper: CFG.proper, anyPos: CFG.anyPos,
+      solo: solo, daily: !!(G && G.daily), lives: CFG.lives, tasks: CFG.tasks, proper: CFG.proper, anyPos: CFG.anyPos,
       totalWords: st.totalWords, totalScore: st.totalScore, durationMs: st.durationMs,
       winner: wp ? wp.name : '', winnerAvg: (wp && wp.words) ? wp.avg : null,
       winnerScore: wp ? (wp.score || 0) : 0,
@@ -928,7 +978,8 @@
       var names = g.players.map(function (p) { return p.name; }).join(', ');
       var head = g.winner ? ('🏆 ' + g.winner + (g.winnerScore ? ' · ' + g.winnerScore + ' очк.' : (g.winnerAvg != null ? ' · ' + fmtSec(g.winnerAvg) + ' с' : ''))) : names;
       var tags = [];
-      if (g.solo) tags.push('соло'); if (g.lives) tags.push(g.lives + '♥'); if (g.tasks) tags.push('задания');
+      if (g.daily) tags.push('🗓️ дневной'); else if (g.solo) tags.push('соло');
+      if (g.lives) tags.push(g.lives + '♥'); if (g.tasks) tags.push('задания');
       if (g.proper) tags.push('имена'); if (g.anyPos) tags.push('любые слова');
       var rows = g.players.map(function (p) {
         return '<div><span class="pdot" style="background:' + p.color + '"></span><b>' + esc(p.name) + '</b> — ' +
@@ -1046,6 +1097,7 @@
     $('startBtn').addEventListener('click', function () { newGame(); });
     $('kidsBtn').addEventListener('click', function () { applyKids(true); renderSetup(); saveCfg(); newGame(); });
     $('botBtn').addEventListener('click', function () { newGame(null, { vsBot: CFG.botLevel }); });
+    $('dailyBtn').addEventListener('click', startDaily);
     $('botLevels').addEventListener('click', function (e) { var v = e.target.getAttribute('data-botlv'); if (v) { CFG.botLevel = v; renderSetup(); saveCfg(); } });
     $('send').addEventListener('click', submitWord);
     $('word').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); submitWord(); } });
@@ -1085,7 +1137,7 @@
     }
     if (tg) { try { tg.ready(); tg.expand(); applyTheme(); tg.onEvent && tg.onEvent('themeChanged', applyTheme); } catch (e) {} }
     bind();
-    $('startBtn').disabled = true; $('kidsBtn').disabled = true; $('botBtn').disabled = true;
+    $('startBtn').disabled = true; $('kidsBtn').disabled = true; $('botBtn').disabled = true; $('dailyBtn').disabled = true;
     loadAll(function () {
       renderSetup(); checkResume();
       Storage.get('onboarded', function (v) { if (!v) showOnboard(); });  // первый запуск (Задача 1)
