@@ -2,10 +2,13 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '29';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '30';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
-  var TASK_BONUS = 3;                  // очки за выполненное задание
+  var TASK_BONUS = 3;                  // (устар.) прежний фикс-бонус
+  var TASK_BASE = 10;                  // базовый бонус задания (× сложность)
+  // Типы заданий: сложность задаёт множитель бонуса. В детском — только лёгкие (без 'end'/'rare').
+  var TASK_TYPES = { end: 1.0, letter: 1.0, theme: 1.2, long: 1.5, rare: 2.0 };
   var DAILY_SECONDS = 60;              // длительность дневного пазла (таймер-атака)
   var GARDEN_MIN_VALUE = 12;           // порог ценности слова для гербария
   var GARDEN_MIN_LEN = 9;              // либо длина слова
@@ -438,14 +441,51 @@
     return from; // все выбыли — оставляем как есть (игра закончится)
   }
   // случайная достижимая буква для задания «закончи на …»
-  function nextTask() {
-    if (!CFG.tasks || !dictReady || (G && G.daily)) { G.task = null; return; }
-    var pool = 'абвгдежзиклмнопрстуфхцчшэюя'.split('');
-    for (var tries = 0; tries < 20; tries++) {
-      var L = pool[Math.floor(Math.random() * pool.length)];
-      if (wordsOn(L)) { G.task = { end: L }; return; }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  var TASK_LETTERS = 'бвгдклмнпрстч';   // для «слово с буквой X» — ходовые согласные
+  function taskReward(type) { return Math.round(TASK_BASE * (TASK_TYPES[type] || 1)); }
+  function makeTask(type, kids) {
+    if (type === 'end') {
+      var pool = 'абвгдежзиклмнопрстуфхцчшэюя'.split('');
+      for (var t = 0; t < 20; t++) { var L = pool[Math.floor(Math.random() * pool.length)]; if (wordsOn(L)) return { type: 'end', letter: L, reward: taskReward('end') }; }
+      return null;
     }
+    if (type === 'letter') { var X = TASK_LETTERS[Math.floor(Math.random() * TASK_LETTERS.length)]; return { type: 'letter', letter: X, reward: taskReward('letter') }; }
+    if (type === 'theme') {
+      var names = shuffle(Dict.themeNames());
+      for (var i = 0; i < names.length; i++) if (Dict.themeWordsOn(names[i], G.required, G.used)) return { type: 'theme', name: names[i], reward: taskReward('theme') };
+      return null;
+    }
+    if (type === 'long') return { type: 'long', len: kids ? 6 : 8, reward: taskReward('long') };
+    if (type === 'rare') return { type: 'rare', rare: 0.5, reward: taskReward('rare') };
+    return null;
+  }
+  function nextTask() {
+    if (!CFG.tasks || !dictReady || (G && (G.daily || G.theme))) { G.task = null; return; }
+    var pool = CFG.kids ? ['theme', 'letter', 'long'] : shuffle(['end', 'letter', 'theme', 'long', 'rare']);
+    for (var i = 0; i < pool.length; i++) { var tk = makeTask(pool[i], CFG.kids); if (tk) { G.task = tk; return; } }
     G.task = null;
+  }
+  // Выполнено ли задание принятым словом (res.key; nextL — рабочая финальная буква).
+  function taskDone(task, res, nextL) {
+    if (!task) return false;
+    if (task.type === 'end') return nextL === task.letter;
+    if (task.type === 'letter') return res.key.indexOf(task.letter) >= 0;
+    if (task.type === 'theme') return dictReady && Dict.hasTheme(task.name, res.key);
+    if (task.type === 'long') return res.key.replace(/-/g, '').length >= task.len;
+    if (task.type === 'rare') return dictReady && Dict.rarity(res.key) >= task.rare;
+    return false;
+  }
+  // Текст задания как ВТОРИЧНОГО бонуса (не конкурирует с главной буквой — снимает путаницу).
+  function taskLabel(task) {
+    if (!task) return '';
+    var r = ' +' + task.reward;
+    if (task.type === 'end') return '🎁 бонус: закончи на «' + task.letter.toUpperCase() + '»' + r;
+    if (task.type === 'letter') return '🎁 бонус: слово с буквой «' + task.letter.toUpperCase() + '»' + r;
+    if (task.type === 'theme') return '🎁 бонус: назови ' + (THEME_EMOJI[task.name] || '') + ' ' + task.name + r;
+    if (task.type === 'long') return '🎁 бонус: слово от ' + task.len + ' букв' + r;
+    if (task.type === 'rare') return '🎁 бонус: редкое слово' + r;
+    return '';
   }
 
   /* ---------- часы и пауза ---------- */
@@ -517,13 +557,13 @@
     speak(res.word);                       // озвучить принятое слово (если включено)
     var ms = elapsed() + G.turnPenalty;
     var nextL = Rules.nextLetter(res.key, CFG.skipJ);
-    var bonus = (G.task && nextL === G.task.end) ? TASK_BONUS : 0;
+    var bonus = taskDone(G.task, res, nextL) ? G.task.reward : 0;
     // очки за ход: база + ловушка + серия(персональная) + скорость + задание (score.js).
     // Серия для множителя — текущая личная серия игрока; ход с подсказкой множителя не даёт.
     var pl = G.players[G.turn];
     var comboStreak = G.hintUsedThisTurn ? 0 : (pl.streak || 0);
     var sc = Score.moveScore({ key: res.key, finalLetter: nextL, streak: comboStreak,
-      ms: ms, taskDone: !!bonus, rarity: dictReady ? Dict.rarity(res.key) : 0, kids: CFG.kids });
+      ms: ms, taskBonus: bonus, rarity: dictReady ? Dict.rarity(res.key) : 0, kids: CFG.kids });
     var ev = { type: 'word', player: G.turn, ms: ms, word: res.word, key: res.key, root: res.root,
       letter: G.required, manual: !!manual, hinted: G.hintUsedThisTurn, bonus: bonus,
       score: sc.total, trap: sc.trap > 0 ? 1 : 0 };
@@ -535,7 +575,7 @@
     G.turn = nextTurn(G.turn);
     nextTask();
     var emo = CFG.kids ? wordEmoji(res.key) : '';         // детская эмодзи-ассоциация
-    var msg = bonus ? ('🎯 Задание выполнено, +' + Score.TASK_PTS + ' очк.')
+    var msg = bonus ? ('🎁 Задание выполнено, +' + bonus + ' очк.')
       : (nx.dead ? (CFG.kids ? KID.dead_end() : Rules.MSG.dead_end) : (emo ? emo + ' ' + cap(res.word) + '!' : ''));
     afterMove(msg, !!bonus || (!!emo && !nx.dead));
     if (emo) kidPop(emo);
@@ -666,7 +706,7 @@
       var hardLetter = !!(G.required && Score.isHard(G.required));
       // иногда пасует по-человечески — чаще когда вариантов мало или буква трудная
       if (!(cands.length && Bot.shouldPass(p.level, cands.length, hardLetter))) {
-        var target = (CFG.tasks && G.task) ? G.task.end : null;     // собрать задание, если есть
+        var target = (CFG.tasks && G.task && G.task.type === 'end') ? G.task.letter : null;  // бот идёт только на «закончи на»
         var order = [], first = Bot.choose(cands, p.level, { skipJ: CFG.skipJ, target: target });
         if (first) order.push(first);
         for (var i = 0; i < cands.length && order.length < 12; i++) if (order.indexOf(cands[i]) < 0) order.push(cands[i]);
@@ -812,18 +852,29 @@
   function streakMult(streak) { return 1 + 0.1 * Math.min(Math.max(streak || 0, 0), 10); }
   // Индикатор лидера — «перетягивание» (только для ровно 2 игроков).
   function renderLead() {
-    var m = $('leadMeter');
-    if (!m) return;
-    if (!G || G.daily || G.players.length !== 2) { m.classList.remove('on'); return; }
-    var p0 = G.players[0], p1 = G.players[1], s0 = p0.score || 0, s1 = p1.score || 0;
-    var ref = CFG.gapWin || 200;                 // при выкл. разрыве — мягкий масштаб
-    var lead = Math.max(-1, Math.min(1, (s0 - s1) / ref));
-    $('leadCapL').style.background = p0.color;
-    $('leadCapR').style.background = p1.color;
-    var knob = $('leadKnob');
-    knob.style.left = (50 - lead * 50) + '%';    // p0 ведёт -> маркер к левой (его) стороне
-    knob.style.background = s0 === s1 ? 'var(--muted)' : (s0 > s1 ? p0.color : p1.color);
+    var m = $('leadMeter'); if (!m) return;
+    if (!G || G.daily || G.players.length < 2) { m.classList.remove('on'); return; }
     m.classList.add('on');
+    var duo = $('leadDuo'), race = $('leadRace');
+    if (G.players.length === 2) {                 // 1-на-1 — перетягивание
+      duo.style.display = ''; race.style.display = 'none';
+      var p0 = G.players[0], p1 = G.players[1], s0 = p0.score || 0, s1 = p1.score || 0;
+      var ref = CFG.gapWin || 200;               // при выкл. разрыве — мягкий масштаб
+      var lead = Math.max(-1, Math.min(1, (s0 - s1) / ref));
+      $('leadCapL').style.background = p0.color;
+      $('leadCapR').style.background = p1.color;
+      var knob = $('leadKnob');
+      knob.style.left = (50 - lead * 50) + '%';   // p0 ведёт -> маркер к его стороне
+      knob.style.background = s0 === s1 ? 'var(--muted)' : (s0 > s1 ? p0.color : p1.color);
+    } else {                                      // 3+ игроков — забег (фишки по очкам)
+      duo.style.display = 'none'; race.style.display = '';
+      var maxS = Math.max.apply(null, G.players.map(function (p) { return p.score || 0; }).concat(1));
+      race.innerHTML = G.players.map(function (p) {
+        var x = 6 + 86 * ((p.score || 0) / maxS);
+        var ini = /^Игрок \d/.test(p.name) ? p.name.replace(/\D/g, '').slice(-1) : (p.name.trim()[0] || '?').toUpperCase();
+        return '<span class="lead-runner" style="left:' + x.toFixed(1) + '%;background:' + p.color + '"' + (p.out ? ' data-out="1"' : '') + '>' + esc(ini) + '</span>';
+      }).join('') + (CFG.gapWin ? '<span class="lead-flag">🏁</span>' : '');
+    }
   }
   function render() {
     $('scores').innerHTML = G.players.map(function (p, i) {
@@ -849,7 +900,7 @@
     lastTurn = G.turn;
 
     var tEl = $('task');
-    if (CFG.tasks && G.task) { tEl.textContent = '🎯 Закончи на «' + G.task.end.toUpperCase() + '» — +' + TASK_BONUS; tEl.classList.add('on'); }
+    if (CFG.tasks && G.task) { tEl.textContent = taskLabel(G.task); tEl.classList.add('on'); }
     else if (G.theme) { tEl.textContent = '🎭 Тема: ' + (THEME_EMOJI[G.theme] || '') + ' ' + G.theme; tEl.classList.add('on'); }
     else tEl.classList.remove('on');
 

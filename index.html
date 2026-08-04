@@ -100,14 +100,23 @@
   .scores{flex:1; display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none}
   .scores::-webkit-scrollbar{display:none}
   /* индикатор лидера — «перетягивание» (для 2 игроков) */
-  .lead{display:none; align-items:center; gap:9px; padding:0 2px 10px}
-  .lead.on{display:flex}
+  .lead{display:none; padding:0 2px 10px}
+  .lead.on{display:block}
+  .lead-duo{display:flex; align-items:center; gap:9px}
   .lead-cap{width:13px; height:13px; border-radius:50%; flex:none}
   .lead-track{flex:1; height:6px; border-radius:6px; position:relative; background:var(--line)}
   .lead-track::before{content:''; position:absolute; left:50%; top:-3px; bottom:-3px; width:1px; background:var(--muted); opacity:.35}
   .lead-knob{position:absolute; top:50%; left:50%; width:18px; height:18px; border-radius:50%;
     transform:translate(-50%,-50%); transition:left .45s cubic-bezier(.2,.8,.2,1), background .3s;
     box-shadow:0 1px 4px rgba(0,0,0,.3); border:2px solid var(--bg)}
+  /* забег — индикатор для 3+ игроков */
+  .lead-race{position:relative; height:24px; margin:2px 0}
+  .lead-race::before{content:''; position:absolute; left:2%; right:2%; top:50%; height:3px; margin-top:-1.5px; border-radius:3px; background:var(--line)}
+  .lead-runner{position:absolute; top:50%; transform:translate(-50%,-50%); width:22px; height:22px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:12px;
+    border:2px solid var(--bg); box-shadow:0 1px 3px rgba(0,0,0,.3); transition:left .45s cubic-bezier(.2,.8,.2,1)}
+  .lead-runner[data-out="1"]{opacity:.4}
+  .lead-flag{position:absolute; right:0; top:50%; transform:translateY(-50%); font-size:15px}
   .sc{background:var(--card); border:1px solid var(--line); border-radius:13px; padding:7px 10px;
       box-shadow:var(--shadow); flex:1 0 auto; min-width:78px}
   .sc.active{border-color:var(--accent); border-width:2px; padding:6px 9px}
@@ -136,8 +145,10 @@
   .mask{font-size:22px; font-weight:800; letter-spacing:4px; color:var(--text); min-height:0; margin-top:6px; display:none}
   .mask.on{display:block}
   .mask small{display:block; font-size:12px; letter-spacing:0; color:var(--muted); font-weight:600; margin-top:2px}
-  .task{font-size:13.5px; font-weight:700; color:var(--warn); min-height:0; margin-top:8px; display:none}
-  .task.on{display:block}
+  .task{font-size:12.5px; font-weight:700; color:var(--warn); min-height:0; margin-top:10px; display:none;
+    background:color-mix(in srgb, var(--warn) 12%, transparent); border:1px solid color-mix(in srgb, var(--warn) 32%, transparent);
+    border-radius:999px; padding:5px 12px}
+  .task.on{display:inline-block}
   .task.hit{color:var(--ok)}
   .sc .hearts{font-size:11px; line-height:1; letter-spacing:1px; margin-top:2px}
   .sc .bonus{font-size:11px; color:var(--warn); font-weight:700}
@@ -565,7 +576,7 @@
 
       <div class="sect">Задания</div>
       <div class="toggle">
-        <div class="tt"><b>🎯 Режим заданий</b><span>«закончи на С» — за выполнение бонусные очки</span></div>
+        <div class="tt"><b>🎁 Режим заданий</b><span>Разные бонусы: категория, длинное/редкое слово, буква. Сложнее — больше очков</span></div>
         <div class="sw" id="tasksSw"><i></i></div>
       </div>
 
@@ -613,9 +624,12 @@
       <div class="scores" id="scores"></div>
     </div>
     <div class="lead" id="leadMeter">
-      <span class="lead-cap" id="leadCapL"></span>
-      <div class="lead-track"><div class="lead-knob" id="leadKnob"></div></div>
-      <span class="lead-cap" id="leadCapR"></span>
+      <div class="lead-duo" id="leadDuo">
+        <span class="lead-cap" id="leadCapL"></span>
+        <div class="lead-track"><div class="lead-knob" id="leadKnob"></div></div>
+        <span class="lead-cap" id="leadCapR"></span>
+      </div>
+      <div class="lead-race" id="leadRace"></div>
     </div>
 
     <div class="stage" id="stage">
@@ -625,10 +639,9 @@
       <div class="letter" id="letter">·</div>
       <div class="clock" id="clock">0,0 с</div>
       <div class="prev" id="prev"></div>
-      <div class="mask" id="mask"></div>
-      <div class="task" id="task"></div>
       <div class="kidpop" id="kidPop"></div>
     </div>
+    <div class="mask" id="mask"></div>
 
     <div class="form" id="form">
       <button type="button" class="sq" id="mic">🎤</button>
@@ -637,6 +650,7 @@
       <button type="button" class="sq" id="send">→</button>
     </div>
     <div class="msgwrap">
+      <div class="task" id="task" style="text-align:center"></div>
       <div class="msg" id="msg"></div>
       <button type="button" class="fixbtn" id="fixBtn">✓ Исправить</button>
       <button type="button" class="override" id="overrideBtn">Всё равно засчитать</button>
@@ -840,17 +854,17 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=29" defer></script>
-<script src="src/morph.js?v=29" defer></script>
-<script src="src/dict.js?v=29" defer></script>
-<script src="src/stats.js?v=29" defer></script>
-<script src="src/storage.js?v=29" defer></script>
-<script src="src/sharecard.js?v=29" defer></script>
-<script src="src/score.js?v=29" defer></script>
-<script src="src/bot.js?v=29" defer></script>
-<script src="data/themes.js?v=29" defer></script>
-<script src="data/attrs.js?v=29" defer></script>
-<script src="src/ui.js?v=29" defer></script>
+<script src="src/rules.js?v=30" defer></script>
+<script src="src/morph.js?v=30" defer></script>
+<script src="src/dict.js?v=30" defer></script>
+<script src="src/stats.js?v=30" defer></script>
+<script src="src/storage.js?v=30" defer></script>
+<script src="src/sharecard.js?v=30" defer></script>
+<script src="src/score.js?v=30" defer></script>
+<script src="src/bot.js?v=30" defer></script>
+<script src="data/themes.js?v=30" defer></script>
+<script src="data/attrs.js?v=30" defer></script>
+<script src="src/ui.js?v=30" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>

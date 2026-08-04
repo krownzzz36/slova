@@ -67,7 +67,7 @@
     var sm = speedMult(opts.ms, opts.kids);
     var km = streakMult(opts.streak);
     var mult = Math.min(sm * km, MULT_CAP);
-    var task = opts.taskDone ? TASK_PTS : 0;
+    var task = opts.taskBonus != null ? opts.taskBonus : (opts.taskDone ? TASK_PTS : 0);
     var total = Math.round(base * mult) + task;
     return { letters: letters, rarity: rare, trap: trap, base: base, speedMult: sm, streakMult: km, mult: mult, task: task, total: total };
   }
