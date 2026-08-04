@@ -518,7 +518,11 @@
 
       <div class="sect">Сколько думать на ход</div>
       <div class="chips" id="limits"></div>
-      <p class="hint" style="margin:8px 2px 0">Время каждого копится отдельно. Побеждает тот, кто в среднем думал меньше всех.</p>
+      <p class="hint" style="margin:8px 2px 0">Время каждого копится отдельно. Быстрый ответ — выше множитель очков.</p>
+
+      <div class="sect">Победа по разрыву очков</div>
+      <div class="chips" id="gapChips"></div>
+      <p class="hint" style="margin:8px 2px 0">Как только один отрывается на столько очков — он побеждает. Игра не тянется бесконечно.</p>
 
       <div class="sect">Жизни</div>
       <div class="chips" id="livesChips"></div>
@@ -595,6 +599,11 @@
   <div class="wrap">
     <div class="top">
       <div class="scores" id="scores"></div>
+    </div>
+    <div class="lead" id="leadMeter">
+      <span class="lead-cap" id="leadCapL"></span>
+      <div class="lead-track"><div class="lead-knob" id="leadKnob"></div></div>
+      <span class="lead-cap" id="leadCapR"></span>
     </div>
 
     <div class="stage" id="stage">
