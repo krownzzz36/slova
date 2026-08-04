@@ -150,6 +150,9 @@
     border-radius:999px; padding:5px 12px}
   .task.on{display:inline-block}
   .task.hit{color:var(--ok)}
+  .task.jack{color:var(--accent); font-weight:800;
+    background:color-mix(in srgb, var(--accent) 16%, transparent);
+    border-color:color-mix(in srgb, var(--accent) 45%, transparent)}
   .sc .hearts{font-size:11px; line-height:1; letter-spacing:1px; margin-top:2px}
   .sc .bonus{font-size:11px; color:var(--warn); font-weight:700}
   .sc .strk{font-size:11px; color:var(--accent); font-weight:800; margin-top:2px; white-space:nowrap}
@@ -854,17 +857,17 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=30" defer></script>
-<script src="src/morph.js?v=30" defer></script>
-<script src="src/dict.js?v=30" defer></script>
-<script src="src/stats.js?v=30" defer></script>
-<script src="src/storage.js?v=30" defer></script>
-<script src="src/sharecard.js?v=30" defer></script>
-<script src="src/score.js?v=30" defer></script>
-<script src="src/bot.js?v=30" defer></script>
-<script src="data/themes.js?v=30" defer></script>
-<script src="data/attrs.js?v=30" defer></script>
-<script src="src/ui.js?v=30" defer></script>
+<script src="src/rules.js?v=31" defer></script>
+<script src="src/morph.js?v=31" defer></script>
+<script src="src/dict.js?v=31" defer></script>
+<script src="src/stats.js?v=31" defer></script>
+<script src="src/storage.js?v=31" defer></script>
+<script src="src/sharecard.js?v=31" defer></script>
+<script src="src/score.js?v=31" defer></script>
+<script src="src/bot.js?v=31" defer></script>
+<script src="data/themes.js?v=31" defer></script>
+<script src="data/attrs.js?v=31" defer></script>
+<script src="src/ui.js?v=31" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>
