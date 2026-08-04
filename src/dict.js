@@ -134,6 +134,30 @@
     return null;
   }
 
+  // Усиленная подсказка: частое слово + его категория (тема). Приоритет —
+  // частое ТЕМАТИЧЕСКОЕ слово (знакомое, есть категория); фолбэк — частое слово
+  // из верхней части тира (без категории). Возврат: { word, theme } | null.
+  function pickRichHint(letter, used, opts) {
+    opts = opts || {};
+    var usedFirst = opts.usedFirstCount || {};
+    function ok(w) {
+      if (letter && w[0] !== letter) return false;
+      if (used && used.has(w)) return false;
+      var nxt = Rules ? Rules.nextLetter(w, opts.skipJ) : null;
+      return !(nxt && !hasWordsOn(nxt, usedFirst));
+    }
+    for (var i = 0; i < freq.length; i++) {           // 1. частое слово с категорией
+      var w = freq[i];
+      if (wordThemeMap[w] && ok(w)) return { word: w, theme: wordThemeMap[w] };
+    }
+    var top = Math.max(1, Math.floor(freq.length * 0.35));
+    for (var j = 0; j < top; j++) {                   // 2. частое слово из верха тира
+      if (ok(freq[j])) return { word: freq[j], theme: null };
+    }
+    var last = pickHint(letter, used, opts);          // 3. общий фолбэк
+    return last ? { word: last, theme: wordThemeMap[last] || null } : null;
+  }
+
   // Пул кандидатов для бота: слова на букву letter из полосы частотного тира
   // [bandFrom..bandTo] (доли 0..1), не в used, не ведущие в тупик. Порядок — по частоте.
   function botCandidates(letter, used, opts) {
@@ -205,6 +229,7 @@
     correct: correct,
     hasWordsOn: hasWordsOn,
     pickHint: pickHint,
+    pickRichHint: pickRichHint,
     botCandidates: botCandidates,
     get ready() { return ready; },
     get meta() { return meta; },

@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '21';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '22';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -748,33 +748,35 @@
 
     if (!G.hint) {
       var L = G.required;
-      var w = G.theme
-        ? Dict.pickThemeHint(G.theme, L, G.used)
-        : (L ? Dict.pickHint(L, G.used, { skipJ: CFG.skipJ, usedFirstCount: G.usedFirstCount }) : firstEasy());
-      if (!w) { setMsg('Не могу подсказать'); return; }
-      G.hint = { word: w, stage: 1 };
+      var h;
+      if (G.theme) { var tw = Dict.pickThemeHint(G.theme, L, G.used); h = tw ? { word: tw, theme: G.theme } : null; }
+      else h = Dict.pickRichHint(L, G.used, { skipJ: CFG.skipJ, usedFirstCount: G.usedFirstCount });
+      if (!h || !h.word) { setMsg('Не могу подсказать'); return; }
+      G.hint = { word: h.word, theme: h.theme || null, stage: 1 };
       G.hintUsedThisTurn = true;
       p.hints++; if (!CFG.kids) G.turnPenalty += HINT_PENALTY_MS;  // в детском — без штрафа (Задача 8)
-      showMask(w, 1);
+      showRichHint(G.hint, 1);
       updateHintBtn(); render(); saveResume();
-    } else if (G.hint.stage === 1) {
-      G.hint.stage = 2;
-      showMask(G.hint.word, 2);
+    } else if (G.hint.stage < 3) {
+      G.hint.stage++;
+      showRichHint(G.hint, G.hint.stage);
     }
   }
-  function firstEasy() {
-    // для свободного старта — любое несказанное частотное слово
-    var half = null;
-    // pickHint без буквы: пройдём тир вручную
-    return Dict.pickHint('', G.used, { skipJ: CFG.skipJ, usedFirstCount: G.usedFirstCount }) || null;
-  }
-  function showMask(w, stage) {
-    var m = $('mask');
+  function hintCatLabel(theme) { return theme ? ((THEME_EMOJI[theme] || '•') + ' ' + theme) : '📝 слово'; }
+  // Усиленная подсказка — 3 шага: категория+длина -> первая/последняя буквы -> слово.
+  function showRichHint(h, stage) {
+    var m = $('mask'), w = h.word, L = w.length, cat = hintCatLabel(h.theme);
+    var lenTxt = L + ' ' + plural(L, 'буква', 'буквы', 'букв');
     if (stage === 1) {
-      m.innerHTML = esc(w[0].toUpperCase()) + ' ' + Array(w.length).join('_ ') +
-        '<small>' + w.length + ' ' + plural(w.length, 'буква', 'буквы', 'букв') + ' · нажми ещё раз, чтобы увидеть</small>';
+      m.innerHTML = '<b>' + esc(cat) + '</b> · ' + lenTxt + '<small>нажми ещё раз — покажу буквы</small>';
+    } else if (stage === 2) {
+      var parts = [];
+      for (var i = 0; i < L; i++) parts.push((i === 0 || i === L - 1) ? esc(w[i].toUpperCase()) : '_');
+      m.innerHTML = '<b>' + esc(cat) + '</b> · ' + lenTxt +
+        '<div style="font-size:22px;letter-spacing:3px;margin-top:6px;font-weight:800">' + parts.join(' ') + '</div>' +
+        '<small>нажми ещё раз — покажу слово</small>';
     } else {
-      m.innerHTML = esc(cap(w)) + '<small>набери или скажи сам — ход твой</small>';
+      m.innerHTML = esc(cap(dictReady ? Dict.display(w) : w)) + '<small>набери или скажи сам — ход твой</small>';
     }
     m.classList.add('on');
   }
