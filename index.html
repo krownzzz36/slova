@@ -499,6 +499,7 @@
       <button class="btn soft accent" id="kidsBtn">🧸 Для малыша</button>
       <button class="btn soft" id="botBtn">🤖 Против робота</button>
       <div class="chips" id="botLevels" style="justify-content:center; margin-top:2px"></div>
+      <button class="btn soft" id="themeBtn">🎭 Тематический раунд</button>
     </div>
   </div>
 </section>
@@ -602,6 +603,20 @@
   </div>
 </section>
 
+<!-- ================= ВЫБОР ТЕМЫ ================= -->
+<section id="themePick" class="screen">
+  <div class="wrap">
+    <div class="scroll">
+      <h2 style="margin:16px 0 4px">🎭 Тематический раунд</h2>
+      <p class="hint" style="margin:0 2px 14px">Выбери тему — в игре принимаются только слова из неё. Цепочка по последней букве, как обычно.</p>
+      <div id="themeList"></div>
+    </div>
+    <div style="padding:6px 0 14px">
+      <button class="btn ghost" id="themeBack">Назад</button>
+    </div>
+  </div>
+</section>
+
 <!-- ================= ГЕРБАРИЙ СЛОВ ================= -->
 <section id="garden" class="screen">
   <div class="wrap">
@@ -677,16 +692,16 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=19" defer></script>
-<script src="src/morph.js?v=19" defer></script>
-<script src="src/dict.js?v=19" defer></script>
-<script src="src/stats.js?v=19" defer></script>
-<script src="src/storage.js?v=19" defer></script>
-<script src="src/sharecard.js?v=19" defer></script>
-<script src="src/score.js?v=19" defer></script>
-<script src="src/bot.js?v=19" defer></script>
-<script src="data/themes.js?v=19" defer></script>
-<script src="src/ui.js?v=19" defer></script>
+<script src="src/rules.js?v=20" defer></script>
+<script src="src/morph.js?v=20" defer></script>
+<script src="src/dict.js?v=20" defer></script>
+<script src="src/stats.js?v=20" defer></script>
+<script src="src/storage.js?v=20" defer></script>
+<script src="src/sharecard.js?v=20" defer></script>
+<script src="src/score.js?v=20" defer></script>
+<script src="src/bot.js?v=20" defer></script>
+<script src="data/themes.js?v=20" defer></script>
+<script src="src/ui.js?v=20" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>

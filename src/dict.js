@@ -25,7 +25,7 @@
   }
 
   var full = null, other = null, names = null, geo = null, freq = [], firstCount = {}, meta = {};
-  var hyphMap = {}, freqPos = {}, themes = {}, ready = false;
+  var hyphMap = {}, freqPos = {}, themes = {}, themeSets = {}, ready = false;
   var ALPHA = 'абвгдежзийклмнопрстуфхцчшщъыьэюя';
 
   function build(g) {
@@ -41,6 +41,10 @@
     for (var i = 0; i < freq.length; i++) freqPos[freq[i]] = i;
     expand(g.DHYPH || '').forEach(function (disp) { if (disp && Rules) hyphMap[Rules.norm(disp)] = disp; });
     themes = g.DTHEMES || {};
+    themeSets = {};                     // нормализованные ключи каждой темы — для игрового режима
+    if (Rules) Object.keys(themes).forEach(function (n) {
+      var s = new Set(); themes[n].forEach(function (w) { s.add(Rules.norm(w)); }); themeSets[n] = s;
+    });
     ready = true;
     return api;
   }
@@ -48,6 +52,24 @@
   function browseTheme(name) {
     var arr = (themes[name] || []).slice();
     return { words: arr, total: arr.length, shown: arr.length };
+  }
+  // Игровой режим по теме: принадлежность, детект тупика и подсказка внутри темы.
+  function hasTheme(name, nk) { var s = themeSets[name]; return !!s && s.has(nk); }
+  function themeWordsOn(name, letter, used) {
+    var arr = themes[name] || [];
+    for (var i = 0; i < arr.length; i++) {
+      var w = Rules ? Rules.norm(arr[i]) : arr[i];
+      if ((!letter || w[0] === letter) && !(used && used.has(w))) return true;
+    }
+    return false;
+  }
+  function pickThemeHint(name, letter, used) {
+    var arr = themes[name] || [];
+    for (var i = 0; i < arr.length; i++) {
+      var w = Rules ? Rules.norm(arr[i]) : arr[i];
+      if ((!letter || w[0] === letter) && !(used && used.has(w))) return w;
+    }
+    return null;
   }
 
   function has(nk) { return !!full && full.has(nk); }
@@ -169,6 +191,9 @@
     browse: browse,
     themeNames: themeNames,
     browseTheme: browseTheme,
+    hasTheme: hasTheme,
+    themeWordsOn: themeWordsOn,
+    pickThemeHint: pickThemeHint,
     has: has,
     hasOther: hasOther,
     hasName: hasName,

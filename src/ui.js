@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '19';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '20';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -169,7 +169,7 @@
   function saveResume() {
     if (!G || G.daily) return;           // дневной пазл не продолжаем (таймер-атака)
     Storage.set('resume', {
-      players: G.players, turn: G.turn, required: G.required, lastWord: G.lastWord,
+      players: G.players, turn: G.turn, required: G.required, lastWord: G.lastWord, theme: G.theme,
       log: G.log.map(function (e) { return { type: e.type, player: e.player, ms: e.ms, word: e.word, key: e.key, root: e.root, letter: e.letter, manual: e.manual, hinted: e.hinted, score: e.score, bonus: e.bonus, trap: e.trap }; }),
       memBase: Array.from(G.memBase), cfg: { limit: CFG.limit, memory: CFG.memory, strictRoots: CFG.strictRoots, skipJ: CFG.skipJ, hintLimit: CFG.hintLimit === Infinity ? null : CFG.hintLimit, proper: CFG.proper, anyPos: CFG.anyPos, lives: CFG.lives, tasks: CFG.tasks, kids: CFG.kids },
       words: G.players.reduce(function (s, p) { return s + p.words; }, 0)
@@ -192,7 +192,14 @@
   }
   function degrade() { dictDegraded = true; dictReady = false; status('офлайн — мягкая проверка слов'); }
   function status(html) { $('dictStatus').innerHTML = html; }
-  function enableStart() { $('startBtn').disabled = false; $('kidsBtn').disabled = false; $('botBtn').disabled = false; $('dailyBtn').disabled = false; }
+  function enableStart() { $('startBtn').disabled = false; $('kidsBtn').disabled = false; $('botBtn').disabled = false; $('dailyBtn').disabled = false; $('themeBtn').disabled = false; }
+  function renderThemePick() {
+    if (!dictReady) { $('themeList').innerHTML = '<div class="empty">Словарь ещё грузится…</div>'; return; }
+    $('themeList').innerHTML = Dict.themeNames().map(function (n) {
+      return '<button class="rowbtn" data-theme="' + esc(n) + '"><b>' + (THEME_EMOJI[n] || '•') + ' ' + esc(n) + '</b>' +
+        '<span class="mini" style="color:var(--muted);font-size:13px">' + Dict.browseTheme(n).total + '</span><span class="arr">›</span></button>';
+    }).join('');
+  }
 
   /* ============ ЭКРАН СТАРТА ============ */
   function renderSetup() {
@@ -286,7 +293,7 @@
     }
     G = {
       players: players,
-      turn: 0, required: null, lastWord: null, deadEnd: false,
+      turn: 0, required: null, lastWord: null, deadEnd: false, theme: opts.theme || null,
       memBase: new Set(base),
       used: new Set(), usedRoots: {}, usedFirstCount: {},
       log: [], streak: 0, turnPenalty: 0, task: null, over: false,
@@ -404,6 +411,7 @@
     return {
       required: G.required, used: G.used, usedRoots: G.usedRoots,
       has: function (nk) {
+        if (G.theme) return dictReady && Dict.hasTheme(G.theme, nk);   // тематический раунд — только слова темы
         return (dictReady && Dict.has(nk)) || CUSTOM.has(nk) ||
           (CFG.proper && dictReady && Dict.hasProper(nk)) ||
           (CFG.anyPos && dictReady && Dict.hasOther(nk));
@@ -429,7 +437,7 @@
     var pool = 'абвгдежзиклмнопрстуфхцчшэюя'.split('');
     for (var tries = 0; tries < 20; tries++) {
       var L = pool[Math.floor(Math.random() * pool.length)];
-      if (Dict.hasWordsOn(L, G.usedFirstCount)) { G.task = { end: L }; return; }
+      if (wordsOn(L)) { G.task = { end: L }; return; }
     }
     G.task = null;
   }
@@ -477,19 +485,23 @@
   }
 
   /* ---------- определение следующей буквы + тупик ---------- */
+  // Есть ли доступные слова на букву L (в тематическом раунде — внутри темы).
+  function wordsOn(L) {
+    return G.theme ? Dict.themeWordsOn(G.theme, L, G.used) : Dict.hasWordsOn(L, G.usedFirstCount);
+  }
   function computeNext(word) {
     var nk = Rules.norm(word);
     var L = Rules.nextLetter(nk, CFG.skipJ);
     if (!L) return { letter: null, dead: false };
     if (!dictReady) return { letter: L, dead: false };
-    if (Dict.hasWordsOn(L, G.usedFirstCount)) return { letter: L, dead: false };
+    if (wordsOn(L)) return { letter: L, dead: false };
     // тупик — идём к предпоследней рабочей букве
     var skip = CFG.skipJ ? Rules.SKIP + 'й' : Rules.SKIP;
     var passedFirst = false;
     for (var i = nk.length - 1; i >= 0; i--) {
       if (skip.indexOf(nk[i]) !== -1) continue;
       if (!passedFirst) { passedFirst = true; continue; } // пропустили саму последнюю
-      if (Dict.hasWordsOn(nk[i], G.usedFirstCount)) return { letter: nk[i], dead: true };
+      if (wordsOn(nk[i])) return { letter: nk[i], dead: true };
     }
     return { letter: null, dead: true }; // совсем некуда — свободный ход
   }
@@ -575,7 +587,9 @@
         buzz('warn');
         return;
       }
-      setMsg(moveMsg(res));
+      var m = moveMsg(res);
+      if (G.theme && res.reason === 'unknown' && dictReady && Dict.has(res.key)) m = 'Слово есть, но не по теме «' + G.theme + '»';
+      setMsg(m);
       G.pending = res.overridable ? res : null;
       $('overrideBtn').classList.toggle('on', !!res.overridable);
       buzz(res.overridable ? 'warn' : 'bad');  // мягкий намёк, не «приговор»
@@ -726,7 +740,9 @@
 
     if (!G.hint) {
       var L = G.required;
-      var w = L ? Dict.pickHint(L, G.used, { skipJ: CFG.skipJ, usedFirstCount: G.usedFirstCount }) : firstEasy();
+      var w = G.theme
+        ? Dict.pickThemeHint(G.theme, L, G.used)
+        : (L ? Dict.pickHint(L, G.used, { skipJ: CFG.skipJ, usedFirstCount: G.usedFirstCount }) : firstEasy());
       if (!w) { setMsg('Не могу подсказать'); return; }
       G.hint = { word: w, stage: 1 };
       G.hintUsedThisTurn = true;
@@ -790,6 +806,7 @@
 
     var tEl = $('task');
     if (CFG.tasks && G.task) { tEl.textContent = '🎯 Закончи на «' + G.task.end.toUpperCase() + '» — +' + TASK_BONUS; tEl.classList.add('on'); }
+    else if (G.theme) { tEl.textContent = '🎭 Тема: ' + (THEME_EMOJI[G.theme] || '') + ' ' + G.theme; tEl.classList.add('on'); }
     else tEl.classList.remove('on');
 
     var sp = G.players[G.turn];
@@ -1172,7 +1189,7 @@
     }
     (r.players || []).forEach(function (p) { if (p.hints == null) p.hints = 0; if (p.swaps == null) p.swaps = SWAPS_PER_GAME; });
     G = {
-      players: r.players, turn: r.turn, required: r.required, lastWord: r.lastWord, deadEnd: false,
+      players: r.players, turn: r.turn, required: r.required, lastWord: r.lastWord, deadEnd: false, theme: r.theme || null,
       memBase: new Set(r.memBase || []), used: new Set(), usedRoots: {}, usedFirstCount: {},
       log: r.log, streak: 0, turnPenalty: 0, task: null, over: false, hint: null, hintUsedThisTurn: false, pending: null
     };
@@ -1261,6 +1278,13 @@
     $('challengeNo').addEventListener('click', function () { $('challengeBanner').classList.remove('on'); });
     $('challengeBtn').addEventListener('click', shareChallenge);
     $('botLevels').addEventListener('click', function (e) { var v = e.target.getAttribute('data-botlv'); if (v) { CFG.botLevel = v; renderSetup(); saveCfg(); } });
+    $('themeBtn').addEventListener('click', function () { renderThemePick(); show('themePick'); });
+    $('themeBack').addEventListener('click', function () { renderSetup(); show('setup'); });
+    $('themeList').addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('[data-theme]') : null;
+      var name = b && b.getAttribute('data-theme');
+      if (name) newGame(null, { theme: name });
+    });
     $('send').addEventListener('click', submitWord);
     $('word').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); submitWord(); } });
     $('word').addEventListener('input', function () { if ($('msg').textContent) { setMsg(''); if (G) G.pending = null; } updatePreview(); });
@@ -1299,7 +1323,7 @@
     }
     if (tg) { try { tg.ready(); tg.expand(); applyTheme(); tg.onEvent && tg.onEvent('themeChanged', applyTheme); } catch (e) {} }
     bind();
-    $('startBtn').disabled = true; $('kidsBtn').disabled = true; $('botBtn').disabled = true; $('dailyBtn').disabled = true;
+    $('startBtn').disabled = true; $('kidsBtn').disabled = true; $('botBtn').disabled = true; $('dailyBtn').disabled = true; $('themeBtn').disabled = true;
     loadAll(function () {
       renderSetup(); checkResume();
       var ch = readChallengeParam();          // вызов по ссылке (Задача 7)
