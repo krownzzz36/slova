@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '25';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '26';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -385,19 +385,21 @@
     G.usedRoots = {}; G.usedFirstCount = {};
     G.memBase.forEach(function (k) { G.usedFirstCount[k[0]] = (G.usedFirstCount[k[0]] || 0) + 1; });
     MEM = new Set(G.memBase);
-    G.players.forEach(function (p) { p.words = 0; p.ms = 0; p.passes = 0; p.timeouts = 0; p.manual = 0; p.bonus = 0; p.score = 0; p.traps = 0; p.swapsUsed = 0; });
+    G.players.forEach(function (p) { p.words = 0; p.ms = 0; p.passes = 0; p.timeouts = 0; p.manual = 0; p.bonus = 0; p.score = 0; p.traps = 0; p.swapsUsed = 0; p.streak = 0; p.bestStreak = 0; });
     G.log.forEach(function (e) {
       var p = G.players[e.player]; if (!p) return;
       p.ms += e.ms || 0;
       if (e.type === 'word') {
         p.words++; if (e.manual) p.manual++; if (e.bonus) p.bonus += e.bonus;
         if (e.score) p.score += e.score; if (e.trap) p.traps++;
+        // персональная серия: чистое слово наращивает, подсказка сбрасывает в 0
+        if (e.hinted) p.streak = 0; else { p.streak++; if (p.streak > p.bestStreak) p.bestStreak = p.streak; }
         G.used.add(e.key); MEM.add(e.key);
         if (e.root) G.usedRoots[e.root] = e.key;
         G.usedFirstCount[e.key[0]] = (G.usedFirstCount[e.key[0]] || 0) + 1;
-      } else if (e.type === 'pass') p.passes++;
-      else if (e.type === 'timeout') p.timeouts++;
-      else if (e.type === 'swap') { p.swapsUsed++; if (e.score) p.score += e.score; }  // цена свапа
+      } else if (e.type === 'pass') { p.passes++; p.streak = 0; }
+      else if (e.type === 'timeout') { p.timeouts++; p.streak = 0; }
+      else if (e.type === 'swap') { p.swapsUsed++; if (e.score) p.score += e.score; p.streak = 0; }  // смена буквы сбрасывает серию
     });
     // жизни: старт минус пасы/таймауты; 0 -> выбыл. Свапы деривятся из журнала (undo-безопасно).
     G.players.forEach(function (p) {
@@ -512,8 +514,11 @@
     var ms = elapsed() + G.turnPenalty;
     var nextL = Rules.nextLetter(res.key, CFG.skipJ);
     var bonus = (G.task && nextL === G.task.end) ? TASK_BONUS : 0;
-    // очки за ход: база(ценность букв) + ловушка + серия + скорость + задание (score.js)
-    var sc = Score.moveScore({ key: res.key, finalLetter: nextL, streak: G.streak,
+    // очки за ход: база + ловушка + серия(персональная) + скорость + задание (score.js).
+    // Серия для множителя — текущая личная серия игрока; ход с подсказкой множителя не даёт.
+    var pl = G.players[G.turn];
+    var comboStreak = G.hintUsedThisTurn ? 0 : (pl.streak || 0);
+    var sc = Score.moveScore({ key: res.key, finalLetter: nextL, streak: comboStreak,
       ms: ms, limit: CFG.limit, taskDone: !!bonus });
     var ev = { type: 'word', player: G.turn, ms: ms, word: res.word, key: res.key, root: res.root,
       letter: G.required, manual: !!manual, hinted: G.hintUsedThisTurn, bonus: bonus,
@@ -524,7 +529,6 @@
     var nx = computeNext(res.word);
     G.required = nx.letter; G.deadEnd = nx.dead; G.lastWord = res.word;
     G.turn = nextTurn(G.turn);
-    G.streak++;
     nextTask();
     var emo = CFG.kids ? wordEmoji(res.key) : '';         // детская эмодзи-ассоциация
     var msg = bonus ? ('🎯 Задание выполнено, +' + Score.TASK_PTS + ' очк.')
@@ -678,7 +682,7 @@
     var cur = G.turn, ms = elapsed() + G.turnPenalty;
     var ev = { type: 'pass', player: cur, ms: ms, letter: G.required };
     G.log.push(ev); syncDerived(); addHist(ev);
-    G.turn = nextTurn(cur); G.streak = 0;
+    G.turn = nextTurn(cur);
     afterMove(outMsg(cur, ''), false);
     checkOver();
   }
@@ -687,7 +691,7 @@
     var cur = G.turn, ms = CFG.limit * 1000 + G.turnPenalty;
     var ev = { type: 'timeout', player: cur, ms: ms, letter: G.required };
     G.log.push(ev); syncDerived(); addHist(ev);
-    G.turn = nextTurn(cur); G.streak = 0; buzz('bad');
+    G.turn = nextTurn(cur); buzz('bad');
     afterMove(outMsg(cur, 'Время вышло — ход переходит'), false);
     checkOver();
   }
@@ -732,7 +736,6 @@
     for (var i = G.log.length - 1; i >= 0; i--) if (G.log[i].type === 'word') { prev = G.log[i]; break; }
     if (prev) { var nx = computeNext(prev.word); G.required = nx.letter; G.deadEnd = nx.dead; G.lastWord = prev.word; }
     else { G.required = null; G.deadEnd = false; G.lastWord = null; }
-    G.streak = 0; for (var j = G.log.length - 1; j >= 0; j--) { if (G.log[j].type === 'word') G.streak++; else break; }
     G.turn = ev.player;
     nextTask();
     afterMove('', false);
@@ -754,7 +757,8 @@
       if (!h || !h.word) { setMsg('Не могу подсказать'); return; }
       G.hint = { word: h.word, theme: h.theme || null, stage: 1 };
       G.hintUsedThisTurn = true;
-      p.hints++; if (!CFG.kids) G.turnPenalty += HINT_PENALTY_MS;  // в детском — без штрафа (Задача 8)
+      p.hints++; p.streak = 0;  // подсказка сбрасывает личную серию (множитель обнуляется)
+      if (!CFG.kids) G.turnPenalty += HINT_PENALTY_MS;  // в детском — без штрафа (Задача 8)
       showRichHint(G.hint, 1);
       updateHintBtn(); render(); saveResume();
     } else if (G.hint.stage < 3) {
@@ -794,14 +798,18 @@
     for (var k = 0; k < CFG.lives; k++) s += (k < p.lives ? '❤️' : '🖤');
     return s;
   }
+  // Множитель очков от личной серии (совпадает с формулой combo в score.js).
+  function streakMult(streak) { return 1 + 0.1 * Math.min(Math.max(streak || 0, 0), 10); }
   function render() {
     $('scores').innerHTML = G.players.map(function (p, i) {
       var hearts = (CFG.lives && !G.daily) ? '<div class="hearts">' + heartStr(p) + '</div>' : '';
       var bonus = (CFG.tasks && p.bonus) ? '<div class="bonus">🎯 ' + p.bonus + '</div>' : '';
+      // личная серия -> множитель очков. Показываем со 2-й, ×множитель — на следующее слово.
+      var strk = ((p.streak || 0) >= 2) ? '<div class="strk">🔥' + p.streak + ' ×' + streakMult(p.streak).toFixed(1) + '</div>' : '';
       return '<div class="sc' + (i === G.turn ? ' active' : '') + (p.out ? ' out' : '') + '">' +
         '<div class="n"><span class="dot" style="background:' + p.color + '"></span>' + esc(p.name) + '</div>' +
         '<div class="v">' + (p.score || 0) + '<span class="pu"> очк.</span></div>' +
-        '<div class="t">' + p.words + ' слов · ' + fmtTot(p.ms) + '</div>' + hearts + bonus + '</div>';
+        '<div class="t">' + p.words + ' слов · ' + fmtTot(p.ms) + '</div>' + hearts + bonus + strk + '</div>';
     }).join('');
     var cur = G.players[G.turn];
     $('turnName').textContent = cur.name;
@@ -837,8 +845,12 @@
       $('prev').textContent = ''; $('word').placeholder = 'слово';
     }
 
+    // счётчик раундов (полных кругов), без огня
+    var np = G.players.length || 1, turns = 0;
+    for (var ti = 0; ti < G.log.length; ti++) if (G.log[ti].type !== 'swap') turns++;
     var sEl = $('series');
-    if (G.streak >= 3) { sEl.textContent = '🔥 серия ' + G.streak; sEl.classList.add('on'); } else sEl.classList.remove('on');
+    sEl.textContent = 'раунд ' + (Math.floor(turns / np) + 1);
+    sEl.classList.add('on');
 
     $('undoBtn').style.display = G.log.length ? '' : 'none';
     updateHintBtn();
@@ -1228,7 +1240,6 @@
     syncDerived(); nextTask();
     var nx = G.lastWord ? computeNext(G.lastWord) : { letter: G.required, dead: false };
     G.required = nx.letter; G.deadEnd = nx.dead;
-    G.streak = 0; for (var j = G.log.length - 1; j >= 0; j--) { if (G.log[j].type === 'word') G.streak++; else break; }
     $('hist').innerHTML = '';
     if (!G.log.length) $('hist').innerHTML = '<div class="empty">Слова появятся здесь.</div>';
     G.log.forEach(function (e) { addHist(e); });
