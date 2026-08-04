@@ -456,10 +456,10 @@
         <h1>Слова <span>— тебе на А</span></h1>
         <p>Арбуз → Зима → Анчоус</p>
       </div>
-      <button class="ob-link" id="howToBtn">Как играть?</button>
 
-      <div class="daily" id="dailyPlate"></div>
-      <button class="btn soft" id="dailyBtn" style="margin:2px 0 2px">🗓️ Дневной пазл — успей за минуту</button>
+      <div class="sect">Кто играет <span style="text-transform:none;letter-spacing:0;font-weight:600">· 1 = сам с собой</span></div>
+      <div id="plist"></div>
+      <button class="addp" id="addP">+ добавить игрока</button>
 
       <div class="resume" id="resumeBanner">
         <p id="resumeText">Продолжить прерванный раунд?</p>
@@ -477,10 +477,15 @@
         </div>
       </div>
 
-      <div class="sect">Игроки <span style="text-transform:none;letter-spacing:0;font-weight:600">· 1 = игра сам с собой</span></div>
-      <div id="plist"></div>
-      <button class="addp" id="addP">+ добавить игрока</button>
+      <div class="sect">Другие режимы</div>
+      <button class="rowbtn" id="kidsBtn"><b>🧸 Для малыша</b><span class="arr">›</span></button>
+      <button class="rowbtn" id="botBtn" style="margin-top:8px"><b>🤖 Против робота</b><span class="arr">›</span></button>
+      <div class="chips" id="botLevels" style="margin-top:6px"></div>
+      <button class="rowbtn" id="themeBtn" style="margin-top:8px"><b>🎭 Тематический раунд</b><span class="arr">›</span></button>
+      <button class="rowbtn" id="dailyBtn" style="margin-top:8px"><b>🗓️ Дневной пазл — минута</b><span class="arr">›</span></button>
+      <div class="daily" id="dailyPlate"></div>
 
+      <div class="sect">Настройки и словарь</div>
       <button class="adv-h" id="advToggle"><span>⚙ Настройки игры</span><span class="arr">›</span></button>
       <div class="adv" id="advBody">
       <div class="toggle" style="border-color:var(--accent); margin-top:4px">
@@ -552,15 +557,12 @@
         <b>🌿 Гербарий слов</b><span class="mini" id="gardenCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
       </button>
 
+      <button class="ob-link" id="howToBtn" style="margin-top:16px">Как играть?</button>
       <div class="dictline" id="dictStatus">словарь загружается…</div>
       <div style="height:8px"></div>
     </div>
-    <div style="padding:6px 0 14px; display:flex; flex-direction:column; gap:8px">
-      <button class="btn" id="startBtn">Играть вдвоём</button>
-      <button class="btn soft accent" id="kidsBtn">🧸 Для малыша</button>
-      <button class="btn soft" id="botBtn">🤖 Против робота</button>
-      <div class="chips" id="botLevels" style="justify-content:center; margin-top:2px"></div>
-      <button class="btn soft" id="themeBtn">🎭 Тематический раунд</button>
+    <div style="padding:6px 0 14px">
+      <button class="btn" id="startBtn">Играть</button>
     </div>
   </div>
 </section>
@@ -754,16 +756,16 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=22" defer></script>
-<script src="src/morph.js?v=22" defer></script>
-<script src="src/dict.js?v=22" defer></script>
-<script src="src/stats.js?v=22" defer></script>
-<script src="src/storage.js?v=22" defer></script>
-<script src="src/sharecard.js?v=22" defer></script>
-<script src="src/score.js?v=22" defer></script>
-<script src="src/bot.js?v=22" defer></script>
-<script src="data/themes.js?v=22" defer></script>
-<script src="src/ui.js?v=22" defer></script>
+<script src="src/rules.js?v=23" defer></script>
+<script src="src/morph.js?v=23" defer></script>
+<script src="src/dict.js?v=23" defer></script>
+<script src="src/stats.js?v=23" defer></script>
+<script src="src/storage.js?v=23" defer></script>
+<script src="src/sharecard.js?v=23" defer></script>
+<script src="src/score.js?v=23" defer></script>
+<script src="src/bot.js?v=23" defer></script>
+<script src="data/themes.js?v=23" defer></script>
+<script src="src/ui.js?v=23" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>

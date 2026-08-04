@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '22';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '23';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -801,7 +801,7 @@
       return '<div class="sc' + (i === G.turn ? ' active' : '') + (p.out ? ' out' : '') + '">' +
         '<div class="n"><span class="dot" style="background:' + p.color + '"></span>' + esc(p.name) + '</div>' +
         '<div class="v">' + (p.score || 0) + '<span class="pu"> очк.</span></div>' +
-        '<div class="t">' + p.words + ' сл · ' + fmtTot(p.ms) + '</div>' + hearts + bonus + '</div>';
+        '<div class="t">' + p.words + ' слов · ' + fmtTot(p.ms) + '</div>' + hearts + bonus + '</div>';
     }).join('');
     var cur = G.players[G.turn];
     $('turnName').textContent = cur.name;
@@ -929,7 +929,7 @@
       $('overSub').textContent = dailyInfo.isRec ? '🏅 новый рекорд дня!' : ('рекорд дня ' + dailyInfo.best + ' очк.');
     } else if (solo) {
       $('overTitle').textContent = 'Твой результат';
-      $('overSub').textContent = top ? (winScore + ' очк. · ' + top.words + ' сл.') : '';
+      $('overSub').textContent = top ? (winScore + ' очк. · ' + top.words + ' слов') : '';
     } else if (survivor) {
       $('overTitle').textContent = survivor.name + ' — победа!';
       $('overSub').textContent = 'остался последним · ' + winScore + ' очк.';

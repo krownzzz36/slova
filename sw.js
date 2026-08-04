@@ -1,6 +1,6 @@
 /* Service Worker — офлайн и мгновенное повторное открытие (ТЗ 4.1.3, §9).
  * При обновлении версии игры поднять CACHE — старый кеш удалится сам. */
-var CACHE = 'slova-v22';
+var CACHE = 'slova-v23';
 var CORE = [
   './', './index.html',
   './src/rules.js?v=22', './src/morph.js?v=22', './src/dict.js?v=22',
