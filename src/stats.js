@@ -14,10 +14,10 @@
     var n = players.length;
     var P = players.map(function (p, i) {
       return { i: i, name: p.name, color: p.color, words: 0, ms: 0, passes: 0,
-        timeouts: 0, hints: 0, manual: 0, bonus: 0, wordEvents: [] };
+        timeouts: 0, hints: 0, manual: 0, bonus: 0, score: 0, traps: 0, wordEvents: [] };
     });
 
-    var totalWordLen = 0, totalWords = 0, durationMs = 0;
+    var totalWordLen = 0, totalWords = 0, durationMs = 0, totalScore = 0;
     var longestWord = null, fastestWord = null, slowestWord = null;
     var streak = 0, bestStreak = 0;
     var letter = {}; // L -> {words, fails, ms}
@@ -37,8 +37,10 @@
         if (ev.hinted) p.hints++;
         if (ev.manual) p.manual++;
         if (ev.bonus) p.bonus += ev.bonus;
+        if (ev.score) p.score += ev.score;
+        if (ev.trap) p.traps++;
         p.wordEvents.push(ev);
-        totalWords++; totalWordLen += wlen(ev.word);
+        totalWords++; totalWordLen += wlen(ev.word); totalScore += ev.score || 0;
         bump(ev.letter, 'words'); bump(ev.letter, 'ms', ev.ms || 0);
         var rec = { word: ev.word, player: ev.player, ms: ev.ms || 0 };
         if (!longestWord || wlen(ev.word) > wlen(longestWord.word)) longestWord = rec;
@@ -68,6 +70,15 @@
     });
     var best = totalWords ? rank[0] : null;
     var maxWords = Math.max.apply(null, P.map(function (p) { return p.words; }).concat(0));
+
+    // рейтинг по очкам — основной для определения победителя
+    var scoreRank = P.slice().sort(function (a, b) {
+      if (b.score !== a.score) return b.score - a.score;
+      if (b.words !== a.words) return b.words - a.words;
+      return a.avg - b.avg;
+    });
+    var topScorer = totalWords ? scoreRank[0] : null;
+    var maxScore = Math.max.apply(null, P.map(function (p) { return p.score; }).concat(0));
 
     // распределение по буквам, на которые отвечали (только реальные слова, без пасов)
     var dist = Object.keys(letter).map(function (L) {
@@ -101,6 +112,7 @@
 
     return {
       players: P, rank: rank, best: best, maxWords: maxWords,
+      scoreRank: scoreRank, topScorer: topScorer, maxScore: maxScore, totalScore: totalScore,
       totalWords: totalWords, durationMs: durationMs,
       avgWordLen: totalWords ? totalWordLen / totalWords : 0,
       longestWord: longestWord, fastestWord: fastestWord, slowestWord: slowestWord,

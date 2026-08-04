@@ -128,7 +128,12 @@
   .pause-sub{font-size:13px; color:var(--muted); margin-bottom:18px}
   .pause-card .btn{margin-top:8px}
 
-  .form{display:flex; gap:7px; margin-bottom:8px; align-items:stretch}
+  .form{display:flex; gap:7px; margin-bottom:8px; align-items:stretch; position:relative}
+  .sc .pu{font-size:11px; font-weight:600; color:var(--muted)}
+  .prevpts{position:absolute; right:64px; top:50%; transform:translateY(-50%) scale(.8);
+    pointer-events:none; font-size:15px; font-weight:800; color:var(--ok);
+    opacity:0; transition:opacity .12s, transform .12s; font-variant-numeric:tabular-nums}
+  .prevpts.on{opacity:.92; transform:translateY(-50%) scale(1)}
   .form input{flex:1; min-width:0; border:1px solid var(--line); background:var(--card); color:var(--text);
               border-radius:16px; padding:15px; font-size:18px; font-weight:600; outline:none; font-family:inherit; min-height:52px}
   .form input:focus{border-color:var(--accent)}
@@ -493,6 +498,7 @@
     <div class="form" id="form">
       <button type="button" class="sq" id="mic">🎤</button>
       <input id="word" placeholder="слово" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" inputmode="text">
+      <span class="prevpts" id="scorePrev"></span>
       <button type="button" class="sq" id="send">→</button>
     </div>
     <div class="msgwrap">
@@ -616,14 +622,15 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=11" defer></script>
-<script src="src/morph.js?v=11" defer></script>
-<script src="src/dict.js?v=11" defer></script>
-<script src="src/stats.js?v=11" defer></script>
-<script src="src/storage.js?v=11" defer></script>
-<script src="src/sharecard.js?v=11" defer></script>
-<script src="data/themes.js?v=11" defer></script>
-<script src="src/ui.js?v=11" defer></script>
+<script src="src/rules.js?v=12" defer></script>
+<script src="src/morph.js?v=12" defer></script>
+<script src="src/dict.js?v=12" defer></script>
+<script src="src/stats.js?v=12" defer></script>
+<script src="src/storage.js?v=12" defer></script>
+<script src="src/sharecard.js?v=12" defer></script>
+<script src="src/score.js?v=12" defer></script>
+<script src="data/themes.js?v=12" defer></script>
+<script src="src/ui.js?v=12" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>

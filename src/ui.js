@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '11';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '12';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -222,12 +222,13 @@
     G.usedRoots = {}; G.usedFirstCount = {};
     G.memBase.forEach(function (k) { G.usedFirstCount[k[0]] = (G.usedFirstCount[k[0]] || 0) + 1; });
     MEM = new Set(G.memBase);
-    G.players.forEach(function (p) { p.words = 0; p.ms = 0; p.passes = 0; p.timeouts = 0; p.manual = 0; p.bonus = 0; });
+    G.players.forEach(function (p) { p.words = 0; p.ms = 0; p.passes = 0; p.timeouts = 0; p.manual = 0; p.bonus = 0; p.score = 0; p.traps = 0; });
     G.log.forEach(function (e) {
       var p = G.players[e.player]; if (!p) return;
       p.ms += e.ms || 0;
       if (e.type === 'word') {
         p.words++; if (e.manual) p.manual++; if (e.bonus) p.bonus += e.bonus;
+        if (e.score) p.score += e.score; if (e.trap) p.traps++;
         G.used.add(e.key); MEM.add(e.key);
         if (e.root) G.usedRoots[e.root] = e.key;
         G.usedFirstCount[e.key[0]] = (G.usedFirstCount[e.key[0]] || 0) + 1;
@@ -328,8 +329,12 @@
     var ms = elapsed() + G.turnPenalty;
     var nextL = Rules.nextLetter(res.key, CFG.skipJ);
     var bonus = (G.task && nextL === G.task.end) ? TASK_BONUS : 0;
+    // очки за ход: база(ценность букв) + ловушка + серия + скорость + задание (score.js)
+    var sc = Score.moveScore({ key: res.key, finalLetter: nextL, streak: G.streak,
+      ms: ms, limit: CFG.limit, taskDone: !!bonus });
     var ev = { type: 'word', player: G.turn, ms: ms, word: res.word, key: res.key, root: res.root,
-      letter: G.required, manual: !!manual, hinted: G.hintUsedThisTurn, bonus: bonus };
+      letter: G.required, manual: !!manual, hinted: G.hintUsedThisTurn, bonus: bonus,
+      score: sc.total, trap: sc.trap > 0 ? 1 : 0 };
     G.log.push(ev);
     syncDerived();
     var nx = computeNext(res.word);
@@ -337,7 +342,7 @@
     G.turn = nextTurn(G.turn);
     G.streak++;
     nextTask();
-    var msg = bonus ? ('🎯 Задание выполнено, +' + bonus) : (nx.dead ? (CFG.kids ? KID.dead_end() : Rules.MSG.dead_end) : '');
+    var msg = bonus ? ('🎯 Задание выполнено, +' + Score.TASK_PTS + ' очк.') : (nx.dead ? (CFG.kids ? KID.dead_end() : Rules.MSG.dead_end) : '');
     afterMove(msg, !!bonus);
     addHist(ev);
     checkOver();
@@ -420,7 +425,7 @@
   }
 
   function afterMove(msg, good) {
-    $('word').value = ''; setMsg(msg || '', !!good); hideMask();
+    $('word').value = ''; setMsg(msg || '', !!good); hideMask(); updatePreview();
     G.hint = null; G.hintUsedThisTurn = false; G.turnPenalty = 0;
     render(); startClock(); saveResume(); focusInput();
     if (CFG.memory) saveMem();
@@ -548,7 +553,8 @@
       var bonus = (CFG.tasks && p.bonus) ? '<div class="bonus">🎯 ' + p.bonus + '</div>' : '';
       return '<div class="sc' + (i === G.turn ? ' active' : '') + (p.out ? ' out' : '') + '">' +
         '<div class="n"><span class="dot" style="background:' + p.color + '"></span>' + esc(p.name) + '</div>' +
-        '<div class="v">' + p.words + '</div><div class="t">' + fmtTot(p.ms) + '</div>' + hearts + bonus + '</div>';
+        '<div class="v">' + (p.score || 0) + '<span class="pu"> очк.</span></div>' +
+        '<div class="t">' + p.words + ' сл · ' + fmtTot(p.ms) + '</div>' + hearts + bonus + '</div>';
     }).join('');
     var cur = G.players[G.turn];
     $('turnName').textContent = cur.name;
@@ -614,6 +620,16 @@
 
   function setMsg(t, good) { $('msg').textContent = t || ''; $('msg').className = 'msg' + (good ? ' good' : ''); if (!t) { $('overrideBtn').classList.remove('on'); $('fixBtn').classList.remove('on'); } }
   function focusInput() { try { $('word').focus(); } catch (e) {} }
+  // Превью очков за набираемое слово (база + ловушка). Контекстные бонусы (серия,
+  // скорость, задание) не показываем — они известны только на приёме.
+  function updatePreview() {
+    var el = $('scorePrev'); if (!el || typeof Score === 'undefined') return;
+    var v = ($('word').value || '').trim();
+    if (!v || !G || paused || G.over) { el.classList.remove('on'); return; }
+    var pts = Score.previewScore(v, CFG.skipJ);
+    if (pts > 0) { el.textContent = '+' + pts; el.classList.add('on'); }
+    else el.classList.remove('on');
+  }
 
   /* ============ ИТОГИ ============ */
   function finish() {
@@ -625,34 +641,36 @@
     bumpStreak();  // засчитать день в серию (Задача 6)
 
     var st = Stats.compute(G.players, G.log);
-    var best = st.best, maxW = st.maxWords;
+    var top = st.topScorer, maxS = st.maxScore;
     var solo = G.players.length === 1;
-    // победа по выживанию: если с жизнями остался один
+    // победа по выживанию (с жизнями) приоритетнее очков; иначе — по очкам
     var survivor = null;
     if (CFG.lives && !solo) { var alive = G.players.filter(function (p) { return !p.out; }); if (alive.length === 1) survivor = alive[0]; }
-    var winnerI = survivor ? G.players.indexOf(survivor) : (best ? best.i : -1);
+    var winnerI = survivor ? G.players.indexOf(survivor) : (top ? top.i : -1);
+    var winScore = winnerI >= 0 ? (st.players[winnerI].score || 0) : 0;
 
     if (solo) {
       $('overTitle').textContent = 'Твой результат';
-      $('overSub').textContent = best ? (best.words + ' сл., в среднем ' + fmtSec(best.avg) + ' с') : '';
+      $('overSub').textContent = top ? (winScore + ' очк. · ' + top.words + ' сл.') : '';
     } else if (survivor) {
       $('overTitle').textContent = survivor.name + ' — победа!';
-      $('overSub').textContent = 'остался последним в игре';
+      $('overSub').textContent = 'остался последним · ' + winScore + ' очк.';
     } else {
-      $('overTitle').textContent = best.name + ' — быстрее всех!';
-      $('overSub').textContent = 'в среднем ' + fmtSec(best.avg) + ' с на слово';
+      $('overTitle').textContent = top.name + ' — победа!';
+      $('overSub').textContent = winScore + ' очк.' + (st.fastestWord ? ' · быстрее всех «' + cap(st.fastestWord.word) + '»' : '');
     }
     if (DAILY.streak > 1) $('overSub').textContent += ' · 🔥 ' + DAILY.streak + ' дн. подряд';
 
-    $('final').innerHTML = st.rank.map(function (p) {
+    $('final').innerHTML = st.scoreRank.map(function (p) {
       var win = p.i === winnerI;
       var extra = (CFG.tasks && p.bonus) ? ' · 🎯' + p.bonus : '';
+      var traps = p.traps ? ' · 🎯ловушек ' + p.traps : '';
       var lives = (CFG.lives) ? (G.players[p.i].out ? ' · выбыл' : '') : '';
       return '<div class="frow' + (win ? ' win' : '') + '">' +
         '<span class="dot" style="background:' + p.color + '"></span>' +
-        '<span class="fn">' + esc(p.name) + (p.words === maxW && maxW > 0 && !solo ? ' 🏆' : '') + '</span>' +
-        '<span class="fs"><b>' + (p.words ? fmtSec(p.avg) + ' с' : '—') + '</b>' +
-        '<span>' + p.words + ' сл. · ' + fmtTot(p.ms) + extra + lives + '</span></span></div>';
+        '<span class="fn">' + esc(p.name) + (p.score === maxS && maxS > 0 && !solo ? ' 🏆' : '') + '</span>' +
+        '<span class="fs"><b>' + (p.score || 0) + ' очк.</b>' +
+        '<span>' + p.words + ' сл. · ' + (p.words ? fmtSec(p.avg) + ' с' : '—') + traps + lives + '</span></span></div>';
     }).join('');
 
     renderBreakdown(st);
@@ -667,11 +685,12 @@
     var rec = {
       t: Date.now(),
       solo: solo, lives: CFG.lives, tasks: CFG.tasks, proper: CFG.proper, anyPos: CFG.anyPos,
-      totalWords: st.totalWords, durationMs: st.durationMs,
+      totalWords: st.totalWords, totalScore: st.totalScore, durationMs: st.durationMs,
       winner: wp ? wp.name : '', winnerAvg: (wp && wp.words) ? wp.avg : null,
+      winnerScore: wp ? (wp.score || 0) : 0,
       players: st.players.map(function (p) {
         return { name: p.name, color: p.color, words: p.words, avg: p.words ? p.avg : null,
-          bonus: p.bonus || 0, out: CFG.lives ? !!(G.players[p.i] && G.players[p.i].out) : false };
+          score: p.score || 0, bonus: p.bonus || 0, out: CFG.lives ? !!(G.players[p.i] && G.players[p.i].out) : false };
       }),
       top: st.longestWord ? { word: st.longestWord.word, player: who(st.longestWord.player) } : null
     };
@@ -684,6 +703,7 @@
   function renderBreakdown(st) {
     var cards = [];
     function card(k, val) { cards.push('<div class="stat"><div class="k">' + k + '</div><div class="val">' + val + '</div></div>'); }
+    card('Всего очков', st.totalScore);
     card('Всего слов', st.totalWords);
     card('Длительность', fmtTot(st.durationMs));
     card('Средняя длина', st.avgWordLen.toFixed(1).replace('.', ',') + ' <small>букв</small>');
@@ -714,6 +734,7 @@
     // по игрокам
     $('perPlayer').innerHTML = st.players.slice().sort(function (a, b) { return a.avg - b.avg; }).map(function (p) {
       var body = '';
+      body += 'Очки: <b>' + (p.score || 0) + '</b>' + (p.traps ? ' · 🎯ловушек <b>' + p.traps + '</b>' : '') + '<br>';
       body += 'Слов: <b>' + p.words + '</b>, среднее <b>' + (p.words ? fmtSec(p.avg) + ' с' : '—') + '</b><br>';
       if (p.fastest) body += 'Быстрее всего: <b>' + cap(p.fastest.word) + '</b> (' + fmtSec(p.fastest.ms) + ' с)<br>';
       if (p.slowest) body += 'Дольше всего: <b>' + cap(p.slowest.word) + '</b> (' + fmtSec(p.slowest.ms) + ' с)<br>';
@@ -728,8 +749,8 @@
   function shareText() {
     var st = Stats.compute(G.players, G.log);
     var lines = ['Игра в слова 🎯'];
-    st.rank.forEach(function (p, i) { lines.push((i === 0 ? '🏆 ' : '') + p.name + ' — ' + (p.words ? fmtSec(p.avg) + ' с/слово, ' + p.words + ' сл.' : 'без слов')); });
-    lines.push('Всего слов: ' + st.totalWords + (st.longestWord ? ', длиннее всех «' + cap(st.longestWord.word) + '»' : ''));
+    st.scoreRank.forEach(function (p, i) { lines.push((i === 0 ? '🏆 ' : '') + p.name + ' — ' + (p.words ? (p.score || 0) + ' очк., ' + p.words + ' сл.' : 'без слов')); });
+    lines.push('Всего очков: ' + st.totalScore + ' · слов: ' + st.totalWords + (st.longestWord ? ' · длиннее всех «' + cap(st.longestWord.word) + '»' : ''));
     return lines.join('\n');
   }
   function share() {  // текстовый фолбэк
@@ -746,7 +767,7 @@
     if (typeof ShareCard === 'undefined' || !G) return share();
     var st = Stats.compute(G.players, G.log);
     var words = G.log.filter(function (e) { return e.type === 'word'; }).map(function (e) { return e.word; });
-    var opts = { winner: $('overTitle').textContent, sub: st.totalWords + ' сл. · ' + fmtTot(st.durationMs),
+    var opts = { winner: $('overTitle').textContent, sub: st.totalScore + ' очк. · ' + st.totalWords + ' сл. · ' + fmtTot(st.durationMs),
       words: words, hardest: st.hardest ? st.hardest.letter : null };
     var canvas;
     try { canvas = ShareCard.draw(opts); } catch (e) { return share(); }
@@ -847,13 +868,14 @@
     }
     $('historyList').innerHTML = HISTORY.map(function (g) {
       var names = g.players.map(function (p) { return p.name; }).join(', ');
-      var head = g.winner ? ('🏆 ' + g.winner + (g.winnerAvg != null ? ' · ' + fmtSec(g.winnerAvg) + ' с' : '')) : names;
+      var head = g.winner ? ('🏆 ' + g.winner + (g.winnerScore ? ' · ' + g.winnerScore + ' очк.' : (g.winnerAvg != null ? ' · ' + fmtSec(g.winnerAvg) + ' с' : ''))) : names;
       var tags = [];
       if (g.solo) tags.push('соло'); if (g.lives) tags.push(g.lives + '♥'); if (g.tasks) tags.push('задания');
       if (g.proper) tags.push('имена'); if (g.anyPos) tags.push('любые слова');
       var rows = g.players.map(function (p) {
         return '<div><span class="pdot" style="background:' + p.color + '"></span><b>' + esc(p.name) + '</b> — ' +
-          (p.words ? fmtSec(p.avg) + ' с · ' + p.words + ' сл.' : 'без слов') +
+          (p.score != null ? '<b>' + p.score + ' очк.</b> · ' : '') +
+          (p.words ? p.words + ' сл. · ' + fmtSec(p.avg) + ' с' : 'без слов') +
           (p.bonus ? ' · 🎯' + p.bonus : '') + (p.out ? ' · выбыл' : '') + '</div>';
       }).join('');
       var top = g.top ? '<div style="margin-top:4px">Длиннее всех: <b>' + esc(cap(g.top.word)) + '</b> · ' + esc(g.top.player) + '</div>' : '';
@@ -966,7 +988,7 @@
     $('kidsBtn').addEventListener('click', function () { applyKids(true); renderSetup(); saveCfg(); newGame(); });
     $('send').addEventListener('click', submitWord);
     $('word').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); submitWord(); } });
-    $('word').addEventListener('input', function () { if ($('msg').textContent) { setMsg(''); if (G) G.pending = null; } });
+    $('word').addEventListener('input', function () { if ($('msg').textContent) { setMsg(''); if (G) G.pending = null; } updatePreview(); });
     $('overrideBtn').addEventListener('click', override);
     $('fixBtn').addEventListener('click', applyFix);
     $('passBtn').addEventListener('click', pass);
