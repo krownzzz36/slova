@@ -111,6 +111,27 @@
     return null;
   }
 
+  // Пул кандидатов для бота: слова на букву letter из полосы частотного тира
+  // [bandFrom..bandTo] (доли 0..1), не в used, не ведущие в тупик. Порядок — по частоте.
+  function botCandidates(letter, used, opts) {
+    opts = opts || {};
+    var n = freq.length;
+    var from = Math.max(0, Math.floor(n * (opts.bandFrom || 0)));
+    var to = Math.min(n, Math.ceil(n * (opts.bandTo == null ? 1 : opts.bandTo)));
+    var limit = opts.limit || 60;
+    var usedFirst = opts.usedFirstCount || {};
+    var out = [];
+    for (var i = from; i < to && out.length < limit; i++) {
+      var w = freq[i];
+      if (letter && w[0] !== letter) continue;
+      if (used && used.has(w)) continue;
+      var nxt = Rules ? Rules.nextLetter(w, opts.skipJ) : null;
+      if (nxt && !hasWordsOn(nxt, usedFirst)) continue; // не отдаём себе/сопернику тупик
+      out.push(w);
+    }
+    return out;
+  }
+
   // ---- Справочник: обзор словаря по буквам и категориям ----
   var RU = 'абвгдежзийклмнопрстуфхцчшщэюяё';
   function catSource(cat) {
@@ -157,6 +178,7 @@
     correct: correct,
     hasWordsOn: hasWordsOn,
     pickHint: pickHint,
+    botCandidates: botCandidates,
     get ready() { return ready; },
     get meta() { return meta; },
     get size() { return full ? full.size : 0; }

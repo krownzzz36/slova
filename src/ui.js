@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '12';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '13';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -16,7 +16,8 @@
   var LIVES = [{ v: 0, t: 'выкл' }, { v: 3, t: '3 ♥' }, { v: 5, t: '5 ♥' }];
 
   var CFG = { names: ['Игрок 1', 'Игрок 2'], limit: 0, memory: false, strictRoots: true,
-    skipJ: true, hintLimit: 3, proper: false, anyPos: false, lives: 0, kids: false, tasks: false, speak: false, advOpen: false };
+    skipJ: true, hintLimit: 3, proper: false, anyPos: false, lives: 0, kids: false, tasks: false, speak: false, advOpen: false, botLevel: 'mid' };
+  var BOTLV = [{ v: 'easy', t: '🙂 Лёгкий' }, { v: 'mid', t: '😎 Средний' }, { v: 'hard', t: '😈 Сложный' }];
   var MEM = new Set();                 // копилка (нормализованные ключи)
   var CUSTOM = new Set();              // свои слова (проходят проверку всегда)
   var HISTORY = [];                    // сыгранные партии (новые сверху)
@@ -124,7 +125,7 @@
   }
   function degrade() { dictDegraded = true; dictReady = false; status('офлайн — мягкая проверка слов'); }
   function status(html) { $('dictStatus').innerHTML = html; }
-  function enableStart() { $('startBtn').disabled = false; $('kidsBtn').disabled = false; }
+  function enableStart() { $('startBtn').disabled = false; $('kidsBtn').disabled = false; $('botBtn').disabled = false; }
 
   /* ============ ЭКРАН СТАРТА ============ */
   function renderSetup() {
@@ -160,6 +161,9 @@
     memInfo();
     $('customCount').textContent = CUSTOM.size ? ('  ' + CUSTOM.size) : '';
     $('historyCount').textContent = HISTORY.length ? ('  ' + HISTORY.length) : '';
+    $('botLevels').innerHTML = BOTLV.map(function (l) {
+      return '<button class="chip' + (CFG.botLevel === l.v ? ' on' : '') + '" data-botlv="' + l.v + '">' + l.t + '</button>';
+    }).join('');
     renderDaily();
   }
 
@@ -196,12 +200,23 @@
   }
 
   /* ============ ПАРТИЯ ============ */
-  function newGame(memBaseArr) {
-    var names = CFG.names.map(function (n, i) { return (n || '').trim() || ('Игрок ' + (i + 1)); });
+  function newGame(memBaseArr, opts) {
+    opts = opts || {};
     var base = memBaseArr || (CFG.memory ? Array.from(MEM) : []);
     if (!CFG.memory) MEM.clear();
+    var players;
+    if (opts.vsBot) {                    // партия против Робота: игрок + бот
+      var human = (CFG.names[0] || '').trim() || 'Ты';
+      players = [
+        { name: human, color: COLORS[0], hints: 0, swaps: SWAPS_PER_GAME, bot: false },
+        { name: 'Робот', color: COLORS[1], hints: 0, swaps: SWAPS_PER_GAME, bot: true, level: opts.vsBot }
+      ];
+    } else {
+      var names = CFG.names.map(function (n, i) { return (n || '').trim() || ('Игрок ' + (i + 1)); });
+      players = names.map(function (n, i) { return { name: n, color: COLORS[i % 6], hints: 0, swaps: SWAPS_PER_GAME, bot: false }; });
+    }
     G = {
-      players: names.map(function (n, i) { return { name: n, color: COLORS[i % 6], hints: 0, swaps: SWAPS_PER_GAME }; }),
+      players: players,
       turn: 0, required: null, lastWord: null, deadEnd: false,
       memBase: new Set(base),
       used: new Set(), usedRoots: {}, usedFirstCount: {},
@@ -212,7 +227,8 @@
     nextTask();
     $('hist').innerHTML = '<div class="empty">Слова появятся здесь.<br>Повторяться нельзя — телефон помнит все.</div>';
     $('word').value = ''; setMsg(''); hideMask(); hidePause();
-    show('game'); render(); startClock(); focusInput();
+    show('game'); render(); startClock();
+    if (G.players[G.turn] && G.players[G.turn].bot) botTurn(); else focusInput();
   }
 
   // Пересчёт производных из memBase + log (устойчиво к отмене): used/roots + счётчики
@@ -284,6 +300,7 @@
   function pauseGame() {
     if (!G || paused || G.over) return;
     paused = true; pauseStart = Date.now(); stopClock(); stopMic();
+    if (botTimer) { clearTimeout(botTimer); botTimer = null; }
     $('pauseSub').textContent = 'Ходит ' + G.players[G.turn].name + ' · время остановлено';
     $('pauseOv').classList.add('on');
   }
@@ -291,7 +308,8 @@
     if (!paused) return;
     paused = false; $('pauseOv').classList.remove('on');
     turnStart += (Date.now() - pauseStart); // «съеденное» паузой время не считаем
-    startClock(); focusInput();
+    startClock();
+    if (G && G.players[G.turn] && G.players[G.turn].bot) botTurn(); else focusInput();
   }
   function hidePause() { paused = false; $('pauseOv').classList.remove('on'); }
   function tick() {
@@ -390,6 +408,7 @@
   function submitWord(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (!G || paused) return;
+    if (G.players[G.turn] && G.players[G.turn].bot) return;   // не наш ход — думает Робот
     var res = Rules.checkMove($('word').value, state());
     if (!res.ok) {
       $('fixBtn').classList.remove('on');
@@ -427,8 +446,46 @@
   function afterMove(msg, good) {
     $('word').value = ''; setMsg(msg || '', !!good); hideMask(); updatePreview();
     G.hint = null; G.hintUsedThisTurn = false; G.turnPenalty = 0;
-    render(); startClock(); saveResume(); focusInput();
+    enableForm(true);
+    render(); startClock(); saveResume();
     if (CFG.memory) saveMem();
+    if (!G.over && G.players[G.turn] && G.players[G.turn].bot) botTurn(); else focusInput();
+  }
+
+  /* ---------- бот-оппонент (Задача 5): ход через обычный accept ---------- */
+  var botTimer = null;
+  function enableForm(on) {
+    $('word').disabled = !on; $('send').disabled = !on;
+    $('passBtn').disabled = !on; $('mic').disabled = !on; $('undoBtn').disabled = !on;
+    if (!on) $('hintBtn').disabled = true;
+    var f = $('form'); if (f) f.classList.toggle('botwait', !on);
+  }
+  function botTurn() {
+    if (!G || G.over) return;
+    var p = G.players[G.turn]; if (!p || !p.bot) return;
+    enableForm(false); setMsg('🤖 Робот думает…');
+    var delay = Bot.thinkMs(p.level);
+    if (CFG.limit) delay = Math.min(delay, Math.max(400, CFG.limit * 1000 - 600));
+    if (botTimer) clearTimeout(botTimer);
+    botTimer = setTimeout(botAct, delay);
+  }
+  function botAct() {
+    botTimer = null;
+    if (!G || G.over || paused) return;  // сворачивание обрабатывается паузой (visibilitychange)
+    var p = G.players[G.turn]; if (!p || !p.bot) return;
+    var chosen = null;
+    if (dictReady && !Bot.willPass(p.level)) {
+      var b = Bot.band(p.level);
+      var cands = Dict.botCandidates(G.required, G.used, { skipJ: CFG.skipJ,
+        usedFirstCount: G.usedFirstCount, bandFrom: b.from, bandTo: b.to, limit: 60 });
+      var order = [], first = Bot.choose(cands, p.level, CFG.skipJ);
+      if (first) order.push(first);
+      for (var i = 0; i < cands.length && order.length < 12; i++) if (order.indexOf(cands[i]) < 0) order.push(cands[i]);
+      var st = state();
+      for (var j = 0; j < order.length; j++) { var r = Rules.checkMove(order[j], st); if (r.ok) { chosen = r; break; } }
+    }
+    if (chosen) { buzz('ok'); accept(chosen, false); }
+    else { pass(); }                     // не нашёл слова — Робот пасует
   }
 
   function outMsg(cur, fallback) {
@@ -560,7 +617,7 @@
     $('turnName').textContent = cur.name;
     $('turnName').style.color = cur.color;
     var av = $('turnAvatar');
-    av.textContent = (cur.name.trim()[0] || '?').toUpperCase();
+    av.textContent = cur.bot ? '🤖' : (cur.name.trim()[0] || '?').toUpperCase();
     av.style.background = cur.color;
     if (lastTurn !== G.turn && !REDUCE_MOTION) {  // «вспышка» при смене хода
       var tr = $('turnRow'); tr.classList.remove('pop'); void tr.offsetWidth; tr.classList.add('pop');
@@ -634,6 +691,7 @@
   /* ============ ИТОГИ ============ */
   function finish() {
     stopClock(); stopMic(); hidePause();
+    if (botTimer) { clearTimeout(botTimer); botTimer = null; }
     var totalWords = G.players.reduce(function (s, p) { return s + p.words; }, 0);
     clearResume();
     if (CFG.memory) saveMem(); saveCustom();
@@ -920,7 +978,8 @@
     if (!G.log.length) $('hist').innerHTML = '<div class="empty">Слова появятся здесь.</div>';
     G.log.forEach(function (e) { addHist(e); });
     setMsg(''); hideMask();
-    show('game'); render(); startClock(); focusInput();
+    show('game'); render(); startClock();
+    if (G.players[G.turn] && G.players[G.turn].bot) botTurn(); else focusInput();
   }
 
   /* ============ МИКРОФОН ============ */
@@ -986,6 +1045,8 @@
     $('advToggle').addEventListener('click', function () { CFG.advOpen = !CFG.advOpen; renderSetup(); saveCfg(); });
     $('startBtn').addEventListener('click', function () { newGame(); });
     $('kidsBtn').addEventListener('click', function () { applyKids(true); renderSetup(); saveCfg(); newGame(); });
+    $('botBtn').addEventListener('click', function () { newGame(null, { vsBot: CFG.botLevel }); });
+    $('botLevels').addEventListener('click', function (e) { var v = e.target.getAttribute('data-botlv'); if (v) { CFG.botLevel = v; renderSetup(); saveCfg(); } });
     $('send').addEventListener('click', submitWord);
     $('word').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); submitWord(); } });
     $('word').addEventListener('input', function () { if ($('msg').textContent) { setMsg(''); if (G) G.pending = null; } updatePreview(); });
@@ -1024,7 +1085,7 @@
     }
     if (tg) { try { tg.ready(); tg.expand(); applyTheme(); tg.onEvent && tg.onEvent('themeChanged', applyTheme); } catch (e) {} }
     bind();
-    $('startBtn').disabled = true; $('kidsBtn').disabled = true;
+    $('startBtn').disabled = true; $('kidsBtn').disabled = true; $('botBtn').disabled = true;
     loadAll(function () {
       renderSetup(); checkResume();
       Storage.get('onboarded', function (v) { if (!v) showOnboard(); });  // первый запуск (Задача 1)
