@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '15';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '16';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -548,7 +548,8 @@
     if (!G || G.over) return;
     var p = G.players[G.turn]; if (!p || !p.bot) return;
     enableForm(false); setMsg('🤖 Робот думает…');
-    var delay = Bot.thinkMs(p.level);
+    var hardLetter = !!(G.required && typeof Score !== 'undefined' && Score.isHard(G.required));
+    var delay = Bot.thinkMs(p.level, hardLetter);
     if (CFG.limit) delay = Math.min(delay, Math.max(400, CFG.limit * 1000 - 600));
     if (botTimer) clearTimeout(botTimer);
     botTimer = setTimeout(botAct, delay);
@@ -558,18 +559,23 @@
     if (!G || G.over || paused) return;  // сворачивание обрабатывается паузой (visibilitychange)
     var p = G.players[G.turn]; if (!p || !p.bot) return;
     var chosen = null;
-    if (dictReady && !Bot.willPass(p.level)) {
+    if (dictReady) {
       var b = Bot.band(p.level);
       var cands = Dict.botCandidates(G.required, G.used, { skipJ: CFG.skipJ,
         usedFirstCount: G.usedFirstCount, bandFrom: b.from, bandTo: b.to, limit: 60 });
-      var order = [], first = Bot.choose(cands, p.level, CFG.skipJ);
-      if (first) order.push(first);
-      for (var i = 0; i < cands.length && order.length < 12; i++) if (order.indexOf(cands[i]) < 0) order.push(cands[i]);
-      var st = state();
-      for (var j = 0; j < order.length; j++) { var r = Rules.checkMove(order[j], st); if (r.ok) { chosen = r; break; } }
+      var hardLetter = !!(G.required && Score.isHard(G.required));
+      // иногда пасует по-человечески — чаще когда вариантов мало или буква трудная
+      if (!(cands.length && Bot.shouldPass(p.level, cands.length, hardLetter))) {
+        var target = (CFG.tasks && G.task) ? G.task.end : null;     // собрать задание, если есть
+        var order = [], first = Bot.choose(cands, p.level, { skipJ: CFG.skipJ, target: target });
+        if (first) order.push(first);
+        for (var i = 0; i < cands.length && order.length < 12; i++) if (order.indexOf(cands[i]) < 0) order.push(cands[i]);
+        var st = state();
+        for (var j = 0; j < order.length; j++) { var r = Rules.checkMove(order[j], st); if (r.ok) { chosen = r; break; } }
+      }
     }
     if (chosen) { buzz('ok'); accept(chosen, false); }
-    else { pass(); }                     // не нашёл слова — Робот пасует
+    else { pass(); }                     // не нашёл слова или решил спасовать
   }
 
   function outMsg(cur, fallback) {
