@@ -20,8 +20,9 @@
   var LIVES = [{ v: 0, t: 'выкл' }, { v: 3, t: '3 ♥' }, { v: 5, t: '5 ♥' }];
 
   var CFG = { names: ['Игрок 1', 'Игрок 2'], limit: 0, memory: false, strictRoots: true,
-    skipJ: true, hintLimit: 3, proper: false, anyPos: false, lives: 0, kids: false, tasks: false, speak: false, advOpen: false, botLevel: 'mid' };
+    skipJ: true, hintLimit: 3, proper: false, anyPos: false, lives: 0, kids: false, tasks: false, speak: false, advOpen: false, botLevel: 'mid', gapWin: 0 };
   var BOTLV = [{ v: 'easy', t: '🙂 Лёгкий' }, { v: 'mid', t: '😎 Средний' }, { v: 'hard', t: '😈 Сложный' }];
+  var GAPS = [{ v: 0, t: 'выкл' }, { v: 150, t: '150' }, { v: 300, t: '300' }];
   var MEM = new Set();                 // копилка (нормализованные ключи)
   var CUSTOM = new Set();              // свои слова (проходят проверку всегда)
   var HISTORY = [];                    // сыгранные партии (новые сверху)
@@ -220,6 +221,9 @@
     }).join('');
     $('livesChips').innerHTML = LIVES.map(function (l) {
       return '<button class="chip' + (CFG.lives === l.v ? ' on' : '') + '" data-lives="' + l.v + '">' + l.t + '</button>';
+    }).join('');
+    $('gapChips').innerHTML = GAPS.map(function (l) {
+      return '<button class="chip' + (CFG.gapWin === l.v ? ' on' : '') + '" data-gap="' + l.v + '">' + l.t + '</button>';
     }).join('');
 
     $('kidsSw').classList.toggle('on', CFG.kids);
@@ -585,7 +589,7 @@
 
   function submitWord(e) {
     if (e && e.preventDefault) e.preventDefault();
-    if (!G || paused) return;
+    if (!G || paused || G.over) return;
     if (G.players[G.turn] && G.players[G.turn].bot) return;   // не наш ход — думает Робот
     var res = Rules.checkMove($('word').value, state());
     if (!res.ok) {
@@ -718,6 +722,12 @@
   }
 
   function checkOver() {
+    if (G.over || G.daily) return;
+    // победа по разрыву очков (2+ игроков): кто оторвался на gapWin — победил
+    if (CFG.gapWin && G.players.length > 1) {
+      var sc = G.players.map(function (p) { return p.score || 0; }).sort(function (a, b) { return b - a; });
+      if (sc[0] > 0 && sc[0] - sc[1] >= CFG.gapWin) { G.over = true; finish(); return; }
+    }
     if (!CFG.lives) return;
     if (G.players.length > 1 && aliveCount() <= 1) { G.over = true; finish(); }
     else if (G.players.length === 1 && G.players[0].out) { G.over = true; finish(); }
@@ -800,6 +810,21 @@
   }
   // Множитель очков от личной серии (совпадает с формулой combo в score.js).
   function streakMult(streak) { return 1 + 0.1 * Math.min(Math.max(streak || 0, 0), 10); }
+  // Индикатор лидера — «перетягивание» (только для ровно 2 игроков).
+  function renderLead() {
+    var m = $('leadMeter');
+    if (!m) return;
+    if (!G || G.daily || G.players.length !== 2) { m.classList.remove('on'); return; }
+    var p0 = G.players[0], p1 = G.players[1], s0 = p0.score || 0, s1 = p1.score || 0;
+    var ref = CFG.gapWin || 200;                 // при выкл. разрыве — мягкий масштаб
+    var lead = Math.max(-1, Math.min(1, (s0 - s1) / ref));
+    $('leadCapL').style.background = p0.color;
+    $('leadCapR').style.background = p1.color;
+    var knob = $('leadKnob');
+    knob.style.left = (50 - lead * 50) + '%';    // p0 ведёт -> маркер к левой (его) стороне
+    knob.style.background = s0 === s1 ? 'var(--muted)' : (s0 > s1 ? p0.color : p1.color);
+    m.classList.add('on');
+  }
   function render() {
     $('scores').innerHTML = G.players.map(function (p, i) {
       var hearts = (CFG.lives && !G.daily) ? '<div class="hearts">' + heartStr(p) + '</div>' : '';
@@ -811,6 +836,7 @@
         '<div class="v">' + (p.score || 0) + '<span class="pu"> очк.</span></div>' +
         '<div class="t">' + p.words + ' слов · ' + fmtTot(p.ms) + '</div>' + hearts + bonus + strk + '</div>';
     }).join('');
+    renderLead();
     var cur = G.players[G.turn];
     $('turnName').textContent = cur.name;
     $('turnName').style.color = cur.color;
@@ -1284,6 +1310,7 @@
     $('limits').addEventListener('click', function (e) { var v = e.target.getAttribute('data-lim'); if (v !== null) { CFG.limit = +v; CFG.kids = false; renderSetup(); saveCfg(); } });
     $('hintLimits').addEventListener('click', function (e) { var v = e.target.getAttribute('data-hint'); if (v !== null) { CFG.hintLimit = (v === 'Infinity') ? Infinity : +v; renderSetup(); saveCfg(); } });
     $('livesChips').addEventListener('click', function (e) { var v = e.target.getAttribute('data-lives'); if (v !== null) { CFG.lives = +v; CFG.kids = false; renderSetup(); saveCfg(); } });
+    $('gapChips').addEventListener('click', function (e) { var v = e.target.getAttribute('data-gap'); if (v !== null) { CFG.gapWin = +v; renderSetup(); saveCfg(); } });
     $('kidsSw').addEventListener('click', function () { applyKids(!CFG.kids); renderSetup(); saveCfg(); });
     $('properSw').addEventListener('click', function () { CFG.proper = !CFG.proper; renderSetup(); saveCfg(); });
     $('posSw').addEventListener('click', function () { CFG.anyPos = !CFG.anyPos; renderSetup(); saveCfg(); });
