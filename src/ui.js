@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '34';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '35';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // (устар.) прежний фикс-бонус
@@ -941,6 +941,9 @@
       $('prev').textContent = ''; $('word').placeholder = 'слово';
     }
 
+    // на буквах «Й» (когда режим с Й) — предложить выключить их прямо в игре
+    $('jHint').classList.toggle('on', !CFG.skipJ && !G.daily && G.required === 'й');
+
     // счётчик раундов (полных кругов), без огня
     var np = G.players.length || 1, turns = 0;
     for (var ti = 0; ti < G.log.length; ti++) if (G.log[ti].type !== 'swap') turns++;
@@ -1519,6 +1522,13 @@
     $('passBtn').addEventListener('click', pass);
     $('hintBtn').addEventListener('click', hint);
     $('swapBtn').addEventListener('click', swap);
+    $('jHint').addEventListener('click', function () {   // выключить слова на «Й» прямо в игре
+      if (!G || paused) return;
+      CFG.skipJ = true; saveCfg();
+      if (G.lastWord) { var nx = computeNext(G.lastWord); G.required = nx.letter; G.deadEnd = nx.dead; }
+      setMsg('Готово — «Й» дальше пропускаем', true);
+      render(); saveResume(); focusInput();
+    });
     $('undoBtn').addEventListener('click', undo);
     $('finishBtn').addEventListener('click', finish);
     $('pauseBtn').addEventListener('click', pauseGame);

@@ -142,6 +142,9 @@
   .letter.dead{color:var(--warn)}
   .clock{font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.5px}
   .prev{font-size:13px; color:var(--muted); min-height:18px; margin-top:2px}
+  .jhint{display:none; margin:8px auto 0; border:1px solid var(--accent); background:transparent; color:var(--accent);
+         border-radius:11px; padding:8px 14px; min-height:38px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit}
+  .jhint.on{display:block}
   .mask{font-size:22px; font-weight:800; letter-spacing:4px; color:var(--text); min-height:0; margin-top:6px; display:none}
   .mask.on{display:block}
   .mask small{display:block; font-size:12px; letter-spacing:0; color:var(--muted); font-weight:600; margin-top:2px}
@@ -659,6 +662,7 @@
       <div class="letter" id="letter">·</div>
       <div class="clock" id="clock">0,0 с</div>
       <div class="prev" id="prev"></div>
+      <button type="button" class="jhint" id="jHint">Надоели «Й»? Пропускать дальше</button>
       <div class="kidpop" id="kidPop"></div>
     </div>
     <div class="mask" id="mask"></div>
@@ -884,18 +888,18 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/wiki.js?v=34" defer></script>
-<script src="src/rules.js?v=34" defer></script>
-<script src="src/morph.js?v=34" defer></script>
-<script src="src/dict.js?v=34" defer></script>
-<script src="src/stats.js?v=34" defer></script>
-<script src="src/storage.js?v=34" defer></script>
-<script src="src/sharecard.js?v=34" defer></script>
-<script src="src/score.js?v=34" defer></script>
-<script src="src/bot.js?v=34" defer></script>
-<script src="data/themes.js?v=34" defer></script>
-<script src="data/attrs.js?v=34" defer></script>
-<script src="src/ui.js?v=34" defer></script>
+<script src="src/wiki.js?v=35" defer></script>
+<script src="src/rules.js?v=35" defer></script>
+<script src="src/morph.js?v=35" defer></script>
+<script src="src/dict.js?v=35" defer></script>
+<script src="src/stats.js?v=35" defer></script>
+<script src="src/storage.js?v=35" defer></script>
+<script src="src/sharecard.js?v=35" defer></script>
+<script src="src/score.js?v=35" defer></script>
+<script src="src/bot.js?v=35" defer></script>
+<script src="data/themes.js?v=35" defer></script>
+<script src="data/attrs.js?v=35" defer></script>
+<script src="src/ui.js?v=35" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>
