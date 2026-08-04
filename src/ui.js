@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '14';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '15';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -235,23 +235,73 @@
 
   // Дневной пазл (Задача 6): соло таймер-атака на «букву дня». Seed от даты у всех
   // одинаков -> счёт сравним. Одна общая минута на всю цепочку.
-  function startDaily() {
+  function startDaily(opts) {
     if (!dictReady) return;
+    opts = opts || {};
+    var letter = opts.letter || letterOfDay();
     var human = (CFG.names[0] || '').trim() || 'Ты';
     MEM.clear();
     G = {
       players: [{ name: human, color: COLORS[0], hints: 0, swaps: 0, bot: false }],
-      turn: 0, required: letterOfDay(), lastWord: null, deadEnd: false,
+      turn: 0, required: letter, lastWord: null, deadEnd: false,
       memBase: new Set(), used: new Set(), usedRoots: {}, usedFirstCount: {},
       log: [], streak: 0, turnPenalty: 0, task: null, over: false,
       hint: null, hintUsedThisTurn: false, pending: null,
-      daily: true, dailyDeadline: Date.now() + DAILY_SECONDS * 1000
+      daily: true, dailyLetter: letter, challenge: opts.challenge || null,
+      dailyDeadline: Date.now() + DAILY_SECONDS * 1000
     };
     syncDerived();
-    $('hist').innerHTML = '<div class="empty">Набирай цепочку на «' + letterOfDay().toUpperCase() +
-      '». Успей за ' + DAILY_SECONDS + ' сек!</div>';
+    var head = opts.challenge
+      ? ('🎯 Побей ' + opts.challenge.score + ' очк. у ' + esc(opts.challenge.name) + ' на «' + letter.toUpperCase() + '»')
+      : ('Набирай цепочку на «' + letter.toUpperCase() + '». Успей за ' + DAILY_SECONDS + ' сек!');
+    $('hist').innerHTML = '<div class="empty">' + head + '</div>';
     $('word').value = ''; setMsg(''); hideMask(); hidePause();
     show('game'); render(); startClock(); focusInput();
+  }
+
+  /* ---------- вызов другу по ссылке (Задача 7): без сервера, seed в ссылке ---------- */
+  var BOT_APP_URL = '';   // после @BotFather /newapp вписать 'https://t.me/ИМЯ_БОТА/ИМЯ_АППА' — ссылка станет нативной TG
+  var RU_ALL = 'абвгдежзийклмнопрстуфхцчшщъыьэюя';
+  var pendingChallenge = null;
+  function b64urlEnc(s) { try { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); } catch (e) { return ''; } }
+  function b64urlDec(s) { try { return decodeURIComponent(escape(atob(String(s).replace(/-/g, '+').replace(/_/g, '/')))); } catch (e) { return ''; } }
+  function encodeChallenge(letter, score, name) {
+    var li = RU_ALL.indexOf(Rules.norm(letter)); if (li < 0) li = 0;
+    return 'c1_' + li + '_' + Math.max(0, score | 0) + '_' + b64urlEnc(String(name || '').slice(0, 14));
+  }
+  function decodeChallenge(code) {
+    if (!code) return null;
+    var p = String(code).split('_');
+    if (p[0] !== 'c1' || p.length < 4) return null;
+    var li = parseInt(p[1], 10), score = parseInt(p[2], 10);
+    if (isNaN(li) || isNaN(score) || li < 0 || li >= RU_ALL.length) return null;
+    return { letter: RU_ALL[li], score: score, name: b64urlDec(p[3]) || 'друг' };
+  }
+  function readChallengeParam() {
+    var code = null;
+    try { if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) code = tg.initDataUnsafe.start_param; } catch (e) {}
+    if (!code) { var m = location.search.match(/[?&](?:startapp|tgWebAppStartParam|challenge)=([^&]+)/); if (m) code = decodeURIComponent(m[1]); }
+    return decodeChallenge(code);
+  }
+  function buildChallengeLink(code) {
+    if (BOT_APP_URL) return BOT_APP_URL + '?startapp=' + code;
+    return location.origin + location.pathname + '?challenge=' + code;
+  }
+  function showChallengeBanner(ch) {
+    pendingChallenge = ch;
+    $('challengeText').innerHTML = '🎯 <b>' + esc(ch.name) + '</b> зовёт побить <b>' + ch.score +
+      ' очк.</b> на «' + ch.letter.toUpperCase() + '»';
+    $('challengeBanner').classList.add('on');
+  }
+  function shareChallenge() {
+    if (!G || !G.dailyLetter) return;
+    var score = Stats.compute(G.players, G.log).totalScore;
+    var me = (G.players[0] && G.players[0].name) || 'Игрок';
+    var link = buildChallengeLink(encodeChallenge(G.dailyLetter, score, me));
+    var txt = '🎯 Я набрал ' + score + ' очк. на «' + G.dailyLetter.toUpperCase() + '» за минуту в «Слова». Побей: ' + link;
+    try { if (tg && tg.switchInlineQuery) { tg.switchInlineQuery(txt, ['users', 'groups']); return; } } catch (e) {}
+    if (navigator.share) { navigator.share({ title: 'Слова — вызов', text: txt }).catch(function () {}); return; }
+    try { navigator.clipboard.writeText(txt); setMsgOver('Ссылка-вызов скопирована'); } catch (e) { setMsgOver('Не вышло скопировать'); }
   }
 
   // Пересчёт производных из memBase + log (устойчиво к отмене): used/roots + счётчики
@@ -754,7 +804,13 @@
     var winnerI = survivor ? G.players.indexOf(survivor) : (top ? top.i : -1);
     var winScore = winnerI >= 0 ? (st.players[winnerI].score || 0) : 0;
 
-    if (isDaily) {
+    if (isDaily && G.challenge) {
+      var beat = dailyInfo.score > G.challenge.score;
+      $('overTitle').textContent = (beat ? '🎉 Победа — ' : 'Почти! ') + dailyInfo.score + ' очк.';
+      $('overSub').textContent = beat
+        ? (G.challenge.name + ': ' + G.challenge.score + ' очк. — теперь твой ход!')
+        : ('нужно больше ' + G.challenge.score + ' очк. — ещё разок?');
+    } else if (isDaily) {
       $('overTitle').textContent = '🗓️ Дневной пазл — ' + dailyInfo.score + ' очк.';
       $('overSub').textContent = dailyInfo.isRec ? '🏅 новый рекорд дня!' : ('рекорд дня ' + dailyInfo.best + ' очк.');
     } else if (solo) {
@@ -767,7 +823,7 @@
       $('overTitle').textContent = top.name + ' — победа!';
       $('overSub').textContent = winScore + ' очк.' + (st.fastestWord ? ' · быстрее всех «' + cap(st.fastestWord.word) + '»' : '');
     }
-    if (DAILY.streak > 1) $('overSub').textContent += ' · 🔥 ' + DAILY.streak + ' дн. подряд';
+    if (!(isDaily && G.challenge) && DAILY.streak > 1) $('overSub').textContent += ' · 🔥 ' + DAILY.streak + ' дн. подряд';
 
     $('final').innerHTML = st.scoreRank.map(function (p) {
       var win = p.i === winnerI;
@@ -783,6 +839,7 @@
 
     renderBreakdown(st);
     if (totalWords) recordHistory(st, winnerI, solo);
+    $('challengeBtn').style.display = isDaily ? '' : 'none';  // вызвать друга можно из дневного/челленджа
     $('againKeep').textContent = 'Ещё раз — помнить ' + MEM.size + ' сл.';
     show('over');
   }
@@ -1097,7 +1154,10 @@
     $('startBtn').addEventListener('click', function () { newGame(); });
     $('kidsBtn').addEventListener('click', function () { applyKids(true); renderSetup(); saveCfg(); newGame(); });
     $('botBtn').addEventListener('click', function () { newGame(null, { vsBot: CFG.botLevel }); });
-    $('dailyBtn').addEventListener('click', startDaily);
+    $('dailyBtn').addEventListener('click', function () { startDaily(); });
+    $('challengeYes').addEventListener('click', function () { if (pendingChallenge) { $('challengeBanner').classList.remove('on'); startDaily({ letter: pendingChallenge.letter, challenge: pendingChallenge }); } });
+    $('challengeNo').addEventListener('click', function () { $('challengeBanner').classList.remove('on'); });
+    $('challengeBtn').addEventListener('click', shareChallenge);
     $('botLevels').addEventListener('click', function (e) { var v = e.target.getAttribute('data-botlv'); if (v) { CFG.botLevel = v; renderSetup(); saveCfg(); } });
     $('send').addEventListener('click', submitWord);
     $('word').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); submitWord(); } });
@@ -1140,7 +1200,9 @@
     $('startBtn').disabled = true; $('kidsBtn').disabled = true; $('botBtn').disabled = true; $('dailyBtn').disabled = true;
     loadAll(function () {
       renderSetup(); checkResume();
-      Storage.get('onboarded', function (v) { if (!v) showOnboard(); });  // первый запуск (Задача 1)
+      var ch = readChallengeParam();          // вызов по ссылке (Задача 7)
+      if (ch) showChallengeBanner(ch);
+      Storage.get('onboarded', function (v) { if (!v && !ch) showOnboard(); });  // первый запуск (Задача 1)
     });
     loadDict();
     // офлайн + мгновенное повторное открытие

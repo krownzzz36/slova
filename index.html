@@ -399,6 +399,14 @@
         </div>
       </div>
 
+      <div class="resume" id="challengeBanner">
+        <p id="challengeText">Тебя вызвали!</p>
+        <div class="rb">
+          <button class="btn soft accent" id="challengeYes" style="flex:1">Принять вызов</button>
+          <button class="btn soft" id="challengeNo" style="flex:0 0 100px">Позже</button>
+        </div>
+      </div>
+
       <div class="sect">Игроки <span style="text-transform:none;letter-spacing:0;font-weight:600">· 1 = игра сам с собой</span></div>
       <div id="plist"></div>
       <button class="addp" id="addP">+ добавить игрока</button>
@@ -555,6 +563,7 @@
     </div>
     <div style="padding:6px 0 14px; display:flex; flex-direction:column; gap:8px">
       <button class="btn" id="againKeep">Ещё раз — помнить слова</button>
+      <button class="btn soft accent" id="challengeBtn" style="display:none">🎯 Бросить вызов другу</button>
       <button class="btn soft" id="shareBtn">🖼 Поделиться картинкой</button>
       <button class="btn soft" id="againFresh">Ещё раз — с чистого листа</button>
       <button class="btn ghost" id="menuBtn">Настройки и игроки</button>
@@ -625,16 +634,16 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=14" defer></script>
-<script src="src/morph.js?v=14" defer></script>
-<script src="src/dict.js?v=14" defer></script>
-<script src="src/stats.js?v=14" defer></script>
-<script src="src/storage.js?v=14" defer></script>
-<script src="src/sharecard.js?v=14" defer></script>
-<script src="src/score.js?v=14" defer></script>
-<script src="src/bot.js?v=14" defer></script>
-<script src="data/themes.js?v=14" defer></script>
-<script src="src/ui.js?v=14" defer></script>
+<script src="src/rules.js?v=15" defer></script>
+<script src="src/morph.js?v=15" defer></script>
+<script src="src/dict.js?v=15" defer></script>
+<script src="src/stats.js?v=15" defer></script>
+<script src="src/storage.js?v=15" defer></script>
+<script src="src/sharecard.js?v=15" defer></script>
+<script src="src/score.js?v=15" defer></script>
+<script src="src/bot.js?v=15" defer></script>
+<script src="data/themes.js?v=15" defer></script>
+<script src="src/ui.js?v=15" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>
