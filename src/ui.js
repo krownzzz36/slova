@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '26';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '27';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -1017,18 +1017,18 @@
     if (st.manualCount) card('Зачтено вручную', st.manualCount);
     $('roundCards').innerHTML = cards.join('');
 
-    // распределение по буквам
-    var top = st.dist.slice(0, 8);
-    var restPct = st.dist.slice(8).reduce(function (s, d) { return s + d.pct; }, 0);
+    // распределение по буквам (топ-10 + сводка по остальным)
+    var top = st.dist.slice(0, 10);
+    var rest = st.dist.slice(10);
+    var restPct = rest.reduce(function (s, d) { return s + d.pct; }, 0);
     var maxPct = top.length ? top[0].pct : 1;
     var bars = top.map(function (d) {
       return '<div class="drow"><div class="dl">' + d.letter + '</div>' +
         '<div class="track"><div class="fill" style="width:' + Math.max(4, d.pct / maxPct * 100) + '%"></div></div>' +
         '<div class="dp">' + d.pct + '%</div></div>';
     });
-    if (restPct > 0) bars.push('<div class="drow"><div class="dl" style="font-size:12px">·</div>' +
-      '<div class="track"><div class="fill" style="width:' + Math.max(4, restPct / maxPct * 100) + '%;opacity:.5"></div></div>' +
-      '<div class="dp">' + restPct + '%</div></div>');
+    if (restPct > 0) bars.push('<div class="hint" style="margin-top:6px">…и ещё ' + rest.length + ' ' +
+      plural(rest.length, 'буква', 'буквы', 'букв') + ' — ' + restPct + '%</div>');
     var extra = '';
     if (st.hardest) extra += '<div class="hint" style="margin-top:8px">😤 Злая буква: <b style="color:var(--text)">' + st.hardest.letter.toUpperCase() + '</b> — ' + Math.round(st.hardest.ratio * 100) + '% ходов в пас/таймаут</div>';
     if (st.fastestLetter) extra += '<div class="hint" style="margin-top:4px">⚡ Быстрая буква: <b style="color:var(--text)">' + st.fastestLetter.letter.toUpperCase() + '</b> — ' + fmtSec(st.fastestLetter.avg) + ' с в среднем</div>';
