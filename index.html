@@ -311,17 +311,22 @@
   @media (prefers-reduced-transparency: reduce){ body::after{display:none} }
 
   /* один серифный голос: заголовки, слова и ЦИФРЫ */
-  .logo{padding:30px 0 8px}
-  .logo h1{font-family:var(--display); font-size:clamp(31px, 8.2vw, 39px); font-weight:800; letter-spacing:-.3px; line-height:1.06; text-wrap:balance}
+  .logo{padding:28px 0 16px; margin-bottom:10px; border-bottom:1px solid var(--line)}
+  .logo h1{font-family:var(--display); font-size:clamp(30px, 8vw, 38px); font-weight:800; letter-spacing:-.3px; line-height:1.04; text-wrap:balance}
   .logo h1 span{color:inherit}
-  .logo p{font-family:var(--serif); font-style:italic; color:var(--muted); font-size:15px; letter-spacing:.2px; margin-top:10px}
+  .logo p{font-family:var(--serif); font-style:italic; color:var(--muted); font-size:15px; letter-spacing:.2px; margin-top:8px}
   #over h2, .ob-title, .pause-title, #custom h2, #history h2, #ref h2{font-family:var(--display); font-weight:700; letter-spacing:-.2px}
   .sect{color:var(--muted); letter-spacing:.18em; font-size:11px; font-weight:700}
 
-  /* поверхности: плоские, тонкая линия, тихая тень */
-  .toggle, .prow, .rowbtn, .adv-h, .daily, .resume, .sc, .stat, .frow, .dist, .pp, .gitem, .citem, .hitem, #mic{
-    border-radius:14px; box-shadow:var(--shadow);
+  /* поверхности: плоско, на тонких линиях, без «карточных» теней */
+  .toggle, .rowbtn, .adv-h, .daily, .resume, .sc, .stat, .frow, .dist, .pp, .gitem, .citem, .hitem, #mic{
+    border-radius:12px; box-shadow:none; border:1px solid var(--line);
   }
+  /* игроки — единый список-ростер, а не стопка карточек */
+  #plist{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card)}
+  #plist .prow{border:none; border-radius:0; background:transparent; box-shadow:none; margin:0; padding:15px 16px; border-bottom:1px solid var(--line)}
+  #plist .prow:last-child{border-bottom:none}
+  .addp{border-radius:12px; margin-top:8px; box-shadow:none}
 
   /* кнопки: плоские, матовые, уверенные */
   .btn{
@@ -336,15 +341,17 @@
   .chip.on{border-color:var(--accent); color:var(--accent); box-shadow:none}
   .sw.on{background:var(--ok)}
 
-  /* сцена: тихая карточка — герой это сама буква */
+  /* сцена — типографский образец во всю ширину, без карточки */
   .stage{
-    border-radius:20px; padding:24px 18px 26px; perspective:820px;
-    background:var(--card); border:1px solid var(--line); box-shadow:var(--shadow);
+    background:transparent; border:none; border-radius:0; box-shadow:none;
+    padding:8px 2px 22px; margin-bottom:14px; perspective:820px;
+    border-bottom:1px solid var(--line);
   }
-  .turn{font-size:15px}
+  .turn{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .turn b{color:var(--text); font-weight:700}
   .letter{
     font-family:var(--display); font-weight:800;
-    font-size:clamp(104px, 30vw, 168px); line-height:.9; letter-spacing:-1px; margin:10px 0 6px;
+    font-size:clamp(120px, 34vw, 200px); line-height:.84; letter-spacing:-2px; margin:6px 0 2px;
     color:var(--accent); text-shadow:0 14px 44px var(--glow);
     transform-origin:center; backface-visibility:hidden; will-change:transform, text-shadow;
   }
