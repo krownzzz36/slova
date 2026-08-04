@@ -1329,6 +1329,13 @@
     $('achBack').addEventListener('click', function () { renderSetup(); show('setup'); });
     $('gardenBtn').addEventListener('click', function () { renderGarden(); show('garden'); });
     $('gardenBack').addEventListener('click', function () { renderSetup(); show('setup'); });
+    $('rulesBtn').addEventListener('click', function () { show('rules'); });
+    $('rulesBack').addEventListener('click', function () { show('setup'); });
+    $('pauseMenu').addEventListener('click', function () {   // в главное меню, партия сохраняется для продолжения
+      saveResume(); paused = false; $('pauseOv').classList.remove('on'); stopClock();
+      if (botTimer) { clearTimeout(botTimer); botTimer = null; }
+      renderSetup(); show('setup'); checkResume();
+    });
     $('refBtn').addEventListener('click', function () { renderRef(); show('ref'); });
     $('refBack').addEventListener('click', function () { renderSetup(); show('setup'); });
     $('refCats').addEventListener('click', function (e) { var c = e.target.getAttribute('data-cat'); if (c) { refCat = c; refCap = 300; refLetter = ''; renderRef(); } });

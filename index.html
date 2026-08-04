@@ -592,6 +592,9 @@
       <button class="rowbtn" id="gardenBtn" style="margin-top:8px">
         <b>🌿 Гербарий слов</b><span class="mini" id="gardenCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
       </button>
+      <button class="rowbtn" id="rulesBtn" style="margin-top:8px">
+        <b>📜 Правила и очки</b><span class="arr">›</span>
+      </button>
 
       <button class="ob-link" id="howToBtn" style="margin-top:16px">Как играть?</button>
       <div class="dictline" id="dictStatus">словарь загружается…</div>
@@ -663,6 +666,7 @@
       <div class="pause-title">⏸ Пауза</div>
       <div class="pause-sub" id="pauseSub">Время остановлено</div>
       <button class="btn" id="resumeBtn">Продолжить</button>
+      <button class="btn soft" id="pauseMenu">🏠 В главное меню</button>
       <button class="btn soft" id="pauseFinish">Завершить игру</button>
     </div>
   </div>
@@ -695,6 +699,45 @@
 </section>
 
 <!-- ================= СВОИ СЛОВА ================= -->
+<!-- ================= ПРАВИЛА И ОЧКИ ================= -->
+<section id="rules" class="screen">
+  <div class="wrap">
+    <div class="scroll">
+      <h2 style="margin:16px 0 10px">📜 Правила и очки</h2>
+
+      <div class="sect">Как играть</div>
+      <p class="hint">Следующее слово — на последнюю букву предыдущего (ь/ъ/ы пропускаются).
+        Повторяться нельзя. Принимаются существительные и прилагательные. Не нашлось слова —
+        «Всё равно засчитать».</p>
+
+      <div class="sect">Очки за слово</div>
+      <p class="hint">Очки = <b style="color:var(--text)">база × скорость × серия</b> + бонус задания.</p>
+      <p class="hint">🔤 <b style="color:var(--text)">База</b> — сумма ценностей букв (редкие буквы дороже) +
+        доплата за <b style="color:var(--text)">редкое слово</b> + <b style="color:var(--text)">ловушка</b>
+        (закончил на трудную букву — ещё очки и подставил соперника).</p>
+      <p class="hint">⚡ <b style="color:var(--text)">Скорость</b> — быстрый ответ повышает множитель
+        (×0.9…×1.5). В детском режиме не влияет.</p>
+      <p class="hint">🔥 <b style="color:var(--text)">Серия</b> — каждое слово подряд повышает множитель
+        (до ×2). Сбрасывается пасом, таймаутом, сменой буквы и подсказкой.</p>
+
+      <div class="sect">Штрафы</div>
+      <p class="hint">💡 Подсказка — обнуляет серию (и добавляет «раздумье»). 🔁 Сменить букву — −8 очков
+        и обнуляет серию. Пас / не успел — обнуляет серию. В детском режиме подсказка и смена
+        буквы бесплатны.</p>
+
+      <div class="sect">Чем заканчивается партия</div>
+      <p class="hint">🏁 <b style="color:var(--text)">Разрыв очков</b> — кто оторвался на 150/300 очков,
+        побеждает (настраивается). 💔 <b style="color:var(--text)">Жизни</b> — кончились сердечки =
+        выбыл, последний оставшийся побеждает. ✋ <b style="color:var(--text)">Вручную</b> —
+        «Завершить игру», побеждает набравший больше очков.</p>
+      <p class="hint">Сверху во время игры — индикатор лидера: маркер уезжает к тому, кто ближе к победе.</p>
+    </div>
+    <div style="padding:6px 0 14px">
+      <button class="btn ghost" id="rulesBack">Назад</button>
+    </div>
+  </div>
+</section>
+
 <section id="custom" class="screen">
   <div class="wrap">
     <div class="scroll">
