@@ -2,11 +2,12 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '35';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '36';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // (устар.) прежний фикс-бонус
   var TASK_BASE = 10;                  // базовый бонус задания (× сложность)
+  var MERCY_GAP = 300;                 // разгром: отрыв, при котором партия завершается сама
   // Типы заданий: сложность задаёт множитель бонуса. В детском — только лёгкие (без 'end'/'rare').
   var TASK_TYPES = { end: 1.0, letter: 1.0, theme: 1.2, long: 1.5, rare: 2.0 };
   var DAILY_SECONDS = 60;              // длительность дневного пазла (таймер-атака)
@@ -785,6 +786,12 @@
     if (CFG.gapWin && G.players.length > 1) {
       var sc = G.players.map(function (p) { return p.score || 0; }).sort(function (a, b) { return b - a; });
       if (sc[0] > 0 && sc[0] - sc[1] >= CFG.gapWin) { G.over = true; finish(); return; }
+    }
+    // «мерси»-правило: разгром завершает партию даже без настройки разрыва (не в детском),
+    // чтобы игра не тянулась при явном лидере. Лидер вдвое+ и отрыв не меньше MERCY_GAP.
+    if (!CFG.kids && G.players.length > 1) {
+      var s2 = G.players.map(function (p) { return p.score || 0; }).sort(function (a, b) { return b - a; });
+      if (s2[0] - s2[1] >= MERCY_GAP && s2[0] >= 2 * Math.max(s2[1], 1)) { G.over = true; finish(); return; }
     }
     if (!CFG.lives) return;
     if (G.players.length > 1 && aliveCount() <= 1) { G.over = true; finish(); }
