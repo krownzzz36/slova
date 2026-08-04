@@ -27,10 +27,18 @@
   var full = null, other = null, names = null, geo = null, freq = [], firstCount = {}, meta = {};
   var hyphMap = {}, freqPos = {}, themes = {}, themeSets = {}, wordThemeMap = {}, ready = false;
   var ALPHA = 'абвгдежзийклмнопрстуфхцчшщъыьэюя';
+  // Классификаторы (build_attrs.py): выровнены по сорт. списку full, 12 бит на слово.
+  var fullArr = [], attrMap = {}, attrMeta = {};
+  var B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  var B64I = {}; for (var _b = 0; _b < B64.length; _b++) B64I[B64[_b]] = _b;
+  var POS_NAME = ['сущ.', 'прил.'], GENDER_NAME = ['', 'мужской', 'женский', 'средний'],
+      ANIM_NAME = ['', 'неживое', 'живое'],
+      TIER_NAME = ['очень частое', 'частое', 'обычное', 'нечастое', 'редкое', 'очень редкое'];
 
   function build(g) {
     g = g || (typeof window !== 'undefined' ? window : {});
-    full = new Set(expand(g.DFULL || ''));
+    fullArr = expand(g.DFULL || '');
+    full = new Set(fullArr);
     other = new Set(expand(g.DOTHER || ''));
     names = new Set(expand(g.DNAMES || ''));
     geo = new Set(expand(g.DGEO || ''));
@@ -45,8 +53,59 @@
     if (Rules) Object.keys(themes).forEach(function (n) {
       var s = new Set(); themes[n].forEach(function (w) { var k = Rules.norm(w); s.add(k); if (!wordThemeMap[k]) wordThemeMap[k] = n; }); themeSets[n] = s;
     });
+    // классификаторы: 2 символа base64 на слово, порядок = fullArr
+    attrMap = {}; attrMeta = g.DATTR_META || {};
+    var da = g.DATTR || '';
+    for (var i = 0; i < fullArr.length; i++) {
+      var c1 = B64I[da[2 * i]], c2 = B64I[da[2 * i + 1]];
+      if (c1 != null && c2 != null) attrMap[fullArr[i]] = (c1 << 6) | c2;
+    }
     ready = true;
     return api;
+  }
+  // Разбор классификаторов слова: {pos, gender, anim, pltm, sgtm, indecl, tier, dim, theme}
+  function attr(nk) {
+    var c = attrMap[nk];
+    if (c == null) return null;
+    return {
+      pos: (c >> 11) & 1, gender: (c >> 9) & 3, anim: (c >> 7) & 3,
+      pltm: (c >> 6) & 1, sgtm: (c >> 5) & 1, indecl: (c >> 4) & 1,
+      tier: (c >> 1) & 7, dim: c & 1, theme: wordThemeMap[nk] || null
+    };
+  }
+  function attrText(nk) {   // человекочитаемо (для справочника/тултипов)
+    var a = attr(nk); if (!a) return '';
+    var t = [POS_NAME[a.pos]];
+    if (a.gender) t.push(GENDER_NAME[a.gender]);
+    if (a.anim === 2) t.push('живое');
+    if (a.pltm) t.push('только мн.ч.'); if (a.sgtm) t.push('только ед.ч.'); if (a.indecl) t.push('несклон.');
+    if (a.dim) t.push('уменьш.');
+    if (a.theme) t.push(a.theme.toLowerCase());
+    t.push(TIER_NAME[a.tier]);
+    return t.join(' · ');
+  }
+  // Запрос по классификаторам. f: {letter,pos,gender,anim,tierMax,tierMin,dim,theme,notDim}
+  // Возвращает ДИСПЛЕЙ-слова (с дефисом, где есть), сортировка алфавитная, cap ограничивает.
+  function query(f, cap) {
+    f = f || {}; cap = cap || 500;
+    var out = [], total = 0, src = f.theme ? (themeSets[f.theme] ? Array.from(themeSets[f.theme]).sort() : []) : fullArr;
+    for (var i = 0; i < src.length; i++) {
+      var k = src[i];
+      if (f.letter && k[0] !== f.letter) continue;
+      var a = attrMap[k]; if (a == null) { if (f.pos != null || f.gender != null || f.anim != null || f.tierMax != null || f.dim || f.notDim) continue; }
+      else {
+        if (f.pos != null && ((a >> 11) & 1) !== f.pos) continue;
+        if (f.gender != null && ((a >> 9) & 3) !== f.gender) continue;
+        if (f.anim != null && ((a >> 7) & 3) !== f.anim) continue;
+        var tier = (a >> 1) & 7;
+        if (f.tierMax != null && tier > f.tierMax) continue;
+        if (f.tierMin != null && tier < f.tierMin) continue;
+        if (f.dim && !(a & 1)) continue;
+        if (f.notDim && (a & 1)) continue;
+      }
+      total++; if (out.length < cap) out.push(hyphMap[k] || k);
+    }
+    return { words: out, total: total, shown: out.length };
   }
   function themeNames() { return Object.keys(themes); }
   function browseTheme(name) {
@@ -103,6 +162,16 @@
       if (rank < bestRank) { bestRank = rank; best = k; }
     }
     return best ? { key: best, display: hyphMap[best] || best } : null;
+  }
+
+  // Редкость слова 0..1 для очков (0 — очень частое, 1 — редкое/вне частотного тира).
+  // По рангу в частотном тире; вне тира — максимум. (Когда допишутся тиры build_attrs.py
+  // — источник можно переключить на них.)
+  function rarity(nk) {
+    if (!nk) return 0;
+    var pos = freqPos[nk];
+    if (pos == null) return 1;
+    return Math.min(1, (pos / (freq.length || 1)) * 0.7);
   }
 
   // Есть ли ещё неиспользованные слова на букву L (для детекта тупика).
@@ -218,6 +287,10 @@
     browseTheme: browseTheme,
     hasTheme: hasTheme,
     wordTheme: wordTheme,
+    attr: attr,
+    attrText: attrText,
+    query: query,
+    get attrMeta() { return attrMeta; },
     themeWordsOn: themeWordsOn,
     pickThemeHint: pickThemeHint,
     has: has,
@@ -228,6 +301,7 @@
     display: display,
     correct: correct,
     hasWordsOn: hasWordsOn,
+    rarity: rarity,
     pickHint: pickHint,
     pickRichHint: pickRichHint,
     botCandidates: botCandidates,

@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '27';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '29';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -519,7 +519,7 @@
     var pl = G.players[G.turn];
     var comboStreak = G.hintUsedThisTurn ? 0 : (pl.streak || 0);
     var sc = Score.moveScore({ key: res.key, finalLetter: nextL, streak: comboStreak,
-      ms: ms, limit: CFG.limit, taskDone: !!bonus });
+      ms: ms, taskDone: !!bonus, rarity: dictReady ? Dict.rarity(res.key) : 0, kids: CFG.kids });
     var ev = { type: 'word', player: G.turn, ms: ms, word: res.word, key: res.key, root: res.root,
       letter: G.required, manual: !!manual, hinted: G.hintUsedThisTurn, bonus: bonus,
       score: sc.total, trap: sc.trap > 0 ? 1 : 0 };
@@ -895,7 +895,7 @@
     var el = $('scorePrev'); if (!el || typeof Score === 'undefined') return;
     var v = ($('word').value || '').trim();
     if (!v || !G || paused || G.over) { el.classList.remove('on'); return; }
-    var pts = Score.previewScore(v, CFG.skipJ);
+    var pts = Score.previewScore(v, CFG.skipJ, dictReady ? Dict.rarity(Rules.norm(v)) : 0);
     if (pts > 0) { el.textContent = '+' + pts; el.classList.add('on'); }
     else el.classList.remove('on');
   }
