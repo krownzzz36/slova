@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '16';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '17';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -23,6 +23,8 @@
   var CUSTOM = new Set();              // свои слова (проходят проверку всегда)
   var HISTORY = [];                    // сыгранные партии (новые сверху)
   var DAILY = { last: null, streak: 0, bestScore: 0, bestDate: null };  // серия дней + рекорд дневного пазла
+  var ASTATS = { games: 0, words: 0, traps: 0, bestWordLen: 0, bestScore: 0, dailyPlays: 0, botHardWins: 0 };  // счётчики для достижений
+  var ACH_DONE = new Set();            // разблокированные достижения (ключи)
   var G = null;
   var dictReady = false, dictDegraded = false;
   var timerId = null, turnStart = 0, warned = false, paused = false, lastTurn = -1;
@@ -60,13 +62,15 @@
 
   /* ============ ХРАНИЛИЩЕ ============ */
   function loadAll(cb) {
-    var pending = 5;
+    var pending = 7;
     function done() { if (--pending === 0) cb(); }
     Storage.get('cfg', function (v) { if (v && typeof v === 'object') { for (var k in CFG) if (k in v) CFG[k] = v[k]; if (CFG.hintLimit === null) CFG.hintLimit = Infinity; } done(); });
     Storage.getList('memory', function (arr) { arr.forEach(function (w) { MEM.add(w); }); done(); });
     Storage.getList('custom', function (arr) { arr.forEach(function (w) { CUSTOM.add(w); }); done(); });
     Storage.getList('history', function (arr) { HISTORY = (arr || []).filter(function (g) { return g && g.t; }); done(); });
     Storage.get('daily', function (v) { if (v && typeof v === 'object') DAILY = { last: v.last || null, streak: v.streak || 0, bestScore: v.bestScore || 0, bestDate: v.bestDate || null }; done(); });
+    Storage.get('astats', function (v) { if (v && typeof v === 'object') { for (var k in ASTATS) if (k in v) ASTATS[k] = v[k]; } done(); });
+    Storage.getList('achUnlocked', function (arr) { (arr || []).forEach(function (k) { ACH_DONE.add(k); }); done(); });
   }
 
   /* ---------- дневной крючок (буква дня + серия дней), офлайн, детерминированно ---------- */
@@ -97,6 +101,44 @@
       '<span class="dr">' + (playedToday ? ('рекорд ' + DAILY.bestScore + ' очк. ✓') : 'таймер-атака') +
       (streak > 1 ? '<br>🔥 ' + streak + ' ' + plural(streak, 'день', 'дня', 'дней') + ' подряд' : '') + '</span>';
   }
+  /* ---------- достижения (Задача 8): офлайн, из счётчиков ASTATS + серии дней ---------- */
+  var ACH = [
+    { key: 'first', icon: '🎬', title: 'Первая партия', desc: 'Сыграть первую игру', done: function (a) { return a.games >= 1; } },
+    { key: 'w10', icon: '📏', title: 'Длинное слово', desc: 'Слово из 10+ букв', done: function (a) { return a.bestWordLen >= 10; } },
+    { key: 'w13', icon: '🦖', title: 'Слово-гигант', desc: 'Слово из 13+ букв', done: function (a) { return a.bestWordLen >= 13; } },
+    { key: 'traps10', icon: '🎯', title: 'Мастер ловушек', desc: 'Закончить на трудную букву 10 раз', done: function (a) { return a.traps >= 10; } },
+    { key: 'score80', icon: '💯', title: 'Крепкая партия', desc: 'Набрать 80 очков за игру', done: function (a) { return a.bestScore >= 80; } },
+    { key: 'words100', icon: '📚', title: 'Сто слов', desc: 'Сказать 100 слов всего', done: function (a) { return a.words >= 100; } },
+    { key: 'daily5', icon: '🗓️', title: 'Постоянство', desc: 'Сыграть дневной пазл 5 раз', done: function (a) { return a.dailyPlays >= 5; } },
+    { key: 'streak3', icon: '🔥', title: 'Три дня подряд', desc: 'Серия 3 дня', done: function (a, d) { return (d.streak || 0) >= 3; } },
+    { key: 'streak7', icon: '🔥', title: 'Неделя подряд', desc: 'Серия 7 дней', done: function (a, d) { return (d.streak || 0) >= 7; } },
+    { key: 'beatHard', icon: '🤖', title: 'Победа над Сложным', desc: 'Обыграть Сложного робота', done: function (a) { return a.botHardWins >= 1; } }
+  ];
+  function evalAch() { return ACH.map(function (x) { return { key: x.key, icon: x.icon, title: x.title, desc: x.desc, done: !!x.done(ASTATS, DAILY) }; }); }
+  function updateAstats(st, isDaily, beatHard) {
+    if (st.totalWords > 0) ASTATS.games++;
+    ASTATS.words += st.totalWords;
+    ASTATS.traps += st.players.reduce(function (s, p) { return s + (p.traps || 0); }, 0);
+    if (st.longestWord) ASTATS.bestWordLen = Math.max(ASTATS.bestWordLen, st.longestWord.word.replace(/-/g, '').length);
+    ASTATS.bestScore = Math.max(ASTATS.bestScore, st.maxScore || 0);
+    if (isDaily) ASTATS.dailyPlays++;
+    if (beatHard) ASTATS.botHardWins++;
+    Storage.set('astats', ASTATS);
+  }
+  function checkNewAch() {
+    var newly = [];
+    evalAch().forEach(function (s) { if (s.done && !ACH_DONE.has(s.key)) { ACH_DONE.add(s.key); newly.push(s); } });
+    if (newly.length) Storage.setList('achUnlocked', Array.from(ACH_DONE));
+    return newly;
+  }
+  function renderAch() {
+    $('achList').innerHTML = evalAch().map(function (s) {
+      return '<div class="achrow' + (s.done ? '' : ' lock') + '"><div class="ai">' + s.icon + '</div>' +
+        '<div class="ac"><b>' + esc(s.title) + '</b><span>' + esc(s.desc) + '</span></div>' +
+        (s.done ? '<div class="ax">✓</div>' : '') + '</div>';
+    }).join('');
+  }
+
   function saveCfg() { var c = {}; for (var k in CFG) c[k] = (CFG[k] === Infinity ? null : CFG[k]); Storage.set('cfg', c); }
   function saveMem() { Storage.setList('memory', Array.from(MEM)); }
   function saveCustom() { Storage.setList('custom', Array.from(CUSTOM)); }
@@ -163,6 +205,7 @@
     memInfo();
     $('customCount').textContent = CUSTOM.size ? ('  ' + CUSTOM.size) : '';
     $('historyCount').textContent = HISTORY.length ? ('  ' + HISTORY.length) : '';
+    $('achCount').textContent = '  ' + ACH_DONE.size + '/' + ACH.length;
     $('botLevels').innerHTML = BOTLV.map(function (l) {
       return '<button class="chip' + (CFG.botLevel === l.v ? ' on' : '') + '" data-botlv="' + l.v + '">' + l.t + '</button>';
     }).join('');
@@ -845,6 +888,16 @@
 
     renderBreakdown(st);
     if (totalWords) recordHistory(st, winnerI, solo);
+    // достижения (Задача 8): обновить счётчики, показать новые разблокировки
+    var hardBot = G.players.some(function (p) { return p.bot && p.level === 'hard'; });
+    var beatHard = hardBot && winnerI >= 0 && G.players[winnerI] && !G.players[winnerI].bot;
+    updateAstats(st, isDaily, beatHard);
+    var newAch = checkNewAch();
+    $('achUnlocked').innerHTML = newAch.length
+      ? ('<div class="achnew">🎉 ' + (newAch.length > 1 ? 'Новые достижения: ' : 'Новое достижение: ') +
+        newAch.map(function (s) { return s.icon + ' <b>' + esc(s.title) + '</b>'; }).join(', ') + '</div>')
+      : '';
+    if (newAch.length) buzz('ok');
     $('challengeBtn').style.display = isDaily ? '' : 'none';  // вызвать друга можно из дневного/челленджа
     $('againKeep').textContent = 'Ещё раз — помнить ' + MEM.size + ' сл.';
     show('over');
@@ -1146,6 +1199,8 @@
     $('customList').addEventListener('click', function (e) { var w = e.target.getAttribute('data-cw'); if (w !== null) { CUSTOM.delete(w); saveCustom(); renderCustom(); } });
     $('historyBtn').addEventListener('click', function () { renderHistory(); show('history'); });
     $('historyBack').addEventListener('click', function () { renderSetup(); show('setup'); });
+    $('achBtn').addEventListener('click', function () { renderAch(); show('ach'); });
+    $('achBack').addEventListener('click', function () { renderSetup(); show('setup'); });
     $('refBtn').addEventListener('click', function () { renderRef(); show('ref'); });
     $('refBack').addEventListener('click', function () { renderSetup(); show('setup'); });
     $('refCats').addEventListener('click', function (e) { var c = e.target.getAttribute('data-cat'); if (c) { refCat = c; refCap = 300; refLetter = ''; renderRef(); } });

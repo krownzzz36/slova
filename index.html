@@ -82,6 +82,15 @@
   .resume.on{display:block}
   .resume p{margin:0 0 10px; font-size:14.5px; font-weight:600}
   .resume .rb{display:flex; gap:8px}
+  .achrow{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:8px; box-shadow:var(--shadow)}
+  .achrow.lock{opacity:.5}
+  .achrow .ai{font-size:26px; flex:none; width:34px; text-align:center; line-height:1}
+  .achrow .ac{flex:1; min-width:0}
+  .achrow .ac b{font-size:14.5px; font-weight:700; display:block}
+  .achrow .ac span{font-size:12.5px; color:var(--muted)}
+  .achrow .ax{font-size:18px; color:var(--ok); flex:none}
+  .achnew{background:var(--card); border:1px solid var(--ok); border-radius:14px; padding:10px 12px; margin:10px 0; font-size:13.5px; text-align:center}
+  .achnew b{color:var(--ok)}
 
   /* ---------- игра ---------- */
   .top{display:flex; gap:6px; padding:10px 0 8px; align-items:center}
@@ -475,6 +484,9 @@
       <button class="rowbtn" id="historyBtn" style="margin-top:8px">
         <b>История игр</b><span class="mini" id="historyCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
       </button>
+      <button class="rowbtn" id="achBtn" style="margin-top:8px">
+        <b>🏅 Достижения</b><span class="mini" id="achCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
+      </button>
 
       <div class="dictline" id="dictStatus">словарь загружается…</div>
       <div style="height:8px"></div>
@@ -553,6 +565,7 @@
     <div class="scroll">
       <h2 id="overTitle"></h2>
       <div class="sub" id="overSub"></div>
+      <div id="achUnlocked"></div>
       <div id="final"></div>
 
       <div class="sect" id="breakHead">Разбор раунда</div>
@@ -581,6 +594,20 @@
     </div>
     <div style="padding:6px 0 14px">
       <button class="btn ghost" id="customBack">Назад</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ДОСТИЖЕНИЯ ================= -->
+<section id="ach" class="screen">
+  <div class="wrap">
+    <div class="scroll">
+      <h2>🏅 Достижения</h2>
+      <p class="hint" style="margin:0 2px 14px">Копятся сами по ходу игры. Работают офлайн.</p>
+      <div id="achList"></div>
+    </div>
+    <div style="padding:6px 0 14px">
+      <button class="btn ghost" id="achBack">Назад</button>
     </div>
   </div>
 </section>
@@ -634,16 +661,16 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=16" defer></script>
-<script src="src/morph.js?v=16" defer></script>
-<script src="src/dict.js?v=16" defer></script>
-<script src="src/stats.js?v=16" defer></script>
-<script src="src/storage.js?v=16" defer></script>
-<script src="src/sharecard.js?v=16" defer></script>
-<script src="src/score.js?v=16" defer></script>
-<script src="src/bot.js?v=16" defer></script>
-<script src="data/themes.js?v=16" defer></script>
-<script src="src/ui.js?v=16" defer></script>
+<script src="src/rules.js?v=17" defer></script>
+<script src="src/morph.js?v=17" defer></script>
+<script src="src/dict.js?v=17" defer></script>
+<script src="src/stats.js?v=17" defer></script>
+<script src="src/storage.js?v=17" defer></script>
+<script src="src/sharecard.js?v=17" defer></script>
+<script src="src/score.js?v=17" defer></script>
+<script src="src/bot.js?v=17" defer></script>
+<script src="data/themes.js?v=17" defer></script>
+<script src="src/ui.js?v=17" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>
