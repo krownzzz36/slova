@@ -393,6 +393,48 @@
   @media (prefers-reduced-motion: no-preference){
     .screen.on > .wrap{animation:scrIn .45s cubic-bezier(.2,.8,.2,1)}
   }
+
+  /* ═══════════ МИНИМАЛИЗМ: меньше рамок, больше воздуха ═══════════ */
+  body::after{display:none}                 /* убрать зерно */
+  body{background:var(--bg)}                 /* плоский фон */
+
+  /* меню, режимы, настройки — строки на тонкой линии, без коробок */
+  .rowbtn, .adv-h, .daily{background:transparent; border:none; border-radius:0;
+    border-bottom:1px solid var(--line); box-shadow:none; padding:17px 2px; margin:0}
+  .toggle{background:transparent; border:none; border-radius:0;
+    border-bottom:1px solid var(--line); box-shadow:none; padding:16px 2px; margin:0}
+  .resume{background:transparent; border:none; box-shadow:none; padding:6px 0 10px}
+
+  /* игроки — только разделители, без внешней рамки */
+  #plist{border:none; border-radius:0; background:transparent}
+  #plist .prow{padding:15px 2px}
+  .addp{background:transparent; border:none; color:var(--muted); box-shadow:none}
+
+  /* второстепенные кнопки — тихий текст, без заливки и рамки */
+  .btn.soft{background:transparent; border:none; box-shadow:none; color:var(--text); font-weight:600}
+  .btn.soft.accent{background:transparent; border:none; color:var(--accent)}
+
+  /* сегменты (время/жизни/сложность) — без коробок, выбранный акцентом */
+  .chip{background:transparent; border:none; color:var(--muted); box-shadow:none}
+  .chip.on{background:transparent; border:none; color:var(--accent); font-weight:800; box-shadow:none}
+
+  /* игровые действия — тихая панель, а не 6 плиток */
+  .bottom{border-top:1px solid var(--line); padding-top:10px; gap:2px}
+  .bottom .btn{background:transparent; border:none; box-shadow:none; color:var(--muted); font-weight:600; min-height:50px}
+  .bottom .btn.soft.accent{color:var(--accent)}
+
+  /* счёт игроков — без коробок */
+  .scores{gap:16px}
+  .sc{background:transparent; border:none; box-shadow:none; padding:4px 0}
+  .sc.active{border:none; box-shadow:none}
+  .sc.active .n, .sc.active .v{color:var(--accent)}
+
+  /* цепочка слов — на линии, без рамки */
+  .hitem{background:transparent; border:none; border-bottom:1px solid var(--line); border-radius:0; padding:12px 2px}
+  .hitem.pass{border-bottom-style:dashed}
+
+  /* больше воздуха между секциями */
+  .sect{margin:26px 0 10px}
 </style>
 </head>
 <body>
