@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '18';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '19';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -170,7 +170,7 @@
     if (!G || G.daily) return;           // дневной пазл не продолжаем (таймер-атака)
     Storage.set('resume', {
       players: G.players, turn: G.turn, required: G.required, lastWord: G.lastWord,
-      log: G.log.map(function (e) { return { type: e.type, player: e.player, ms: e.ms, word: e.word, key: e.key, root: e.root, letter: e.letter, manual: e.manual, hinted: e.hinted }; }),
+      log: G.log.map(function (e) { return { type: e.type, player: e.player, ms: e.ms, word: e.word, key: e.key, root: e.root, letter: e.letter, manual: e.manual, hinted: e.hinted, score: e.score, bonus: e.bonus, trap: e.trap }; }),
       memBase: Array.from(G.memBase), cfg: { limit: CFG.limit, memory: CFG.memory, strictRoots: CFG.strictRoots, skipJ: CFG.skipJ, hintLimit: CFG.hintLimit === Infinity ? null : CFG.hintLimit, proper: CFG.proper, anyPos: CFG.anyPos, lives: CFG.lives, tasks: CFG.tasks, kids: CFG.kids },
       words: G.players.reduce(function (s, p) { return s + p.words; }, 0)
     });
@@ -378,7 +378,7 @@
     G.usedRoots = {}; G.usedFirstCount = {};
     G.memBase.forEach(function (k) { G.usedFirstCount[k[0]] = (G.usedFirstCount[k[0]] || 0) + 1; });
     MEM = new Set(G.memBase);
-    G.players.forEach(function (p) { p.words = 0; p.ms = 0; p.passes = 0; p.timeouts = 0; p.manual = 0; p.bonus = 0; p.score = 0; p.traps = 0; });
+    G.players.forEach(function (p) { p.words = 0; p.ms = 0; p.passes = 0; p.timeouts = 0; p.manual = 0; p.bonus = 0; p.score = 0; p.traps = 0; p.swapsUsed = 0; });
     G.log.forEach(function (e) {
       var p = G.players[e.player]; if (!p) return;
       p.ms += e.ms || 0;
@@ -390,11 +390,13 @@
         G.usedFirstCount[e.key[0]] = (G.usedFirstCount[e.key[0]] || 0) + 1;
       } else if (e.type === 'pass') p.passes++;
       else if (e.type === 'timeout') p.timeouts++;
+      else if (e.type === 'swap') { p.swapsUsed++; if (e.score) p.score += e.score; }  // цена свапа
     });
-    // жизни: старт минус пасы/таймауты; 0 -> выбыл
+    // жизни: старт минус пасы/таймауты; 0 -> выбыл. Свапы деривятся из журнала (undo-безопасно).
     G.players.forEach(function (p) {
       if (CFG.lives) { p.lives = Math.max(0, CFG.lives - p.passes - p.timeouts); p.out = p.lives === 0; }
       else { p.lives = 0; p.out = false; }
+      p.swaps = Math.max(0, (G.daily ? 0 : SWAPS_PER_GAME) - p.swapsUsed);
     });
   }
 
@@ -671,6 +673,7 @@
   // «Сменить букву»: ответить на предпоследнюю рабочую букву (3 раза за игру).
   function swap() {
     if (!G || paused) return;
+    if (G.players[G.turn] && G.players[G.turn].bot) return;   // бот не свапает
     var p = G.players[G.turn];
     if (p.swaps <= 0) { setMsg('«Сменить букву» больше нельзя'); return; }
     if (!G.required || !G.lastWord) { setMsg('Сейчас любое слово — менять нечего'); return; }
@@ -680,8 +683,11 @@
     for (var i = nk.length - 1; i >= 0 && found.length < 2; i--) if (skip.indexOf(nk[i]) === -1) found.push(nk[i]);
     var prevL = found[1];
     if (!prevL) { setMsg('Не на что менять'); return; }
-    p.swaps--; G.required = prevL; G.deadEnd = false;
-    setMsg('Буква сменена на «' + prevL.toUpperCase() + '»', true);
+    var cost = (CFG.kids || typeof Score === 'undefined') ? 0 : Score.SWAP_COST;  // в детском бесплатно
+    var ev = { type: 'swap', player: G.turn, ms: 0, letter: prevL, score: -cost };
+    G.log.push(ev); syncDerived(); addHist(ev);
+    G.required = prevL; G.deadEnd = false;
+    setMsg('Буква сменена на «' + prevL.toUpperCase() + '»' + (cost ? ' · −' + cost + ' очк.' : ''), true);
     render(); saveResume(); focusInput();
   }
 
@@ -790,7 +796,8 @@
     $('passBtn').style.display = G.daily ? 'none' : '';
     $('swapBtn').style.display = G.daily ? 'none' : '';
     $('swapBtn').disabled = sp.swaps <= 0 || !G.required;
-    $('swapBtn').textContent = 'Сменить букву' + (sp.swaps > 0 ? ' (' + sp.swaps + ')' : '');
+    var swapCost = (CFG.kids || typeof Score === 'undefined') ? 0 : Score.SWAP_COST;
+    $('swapBtn').textContent = 'Сменить букву' + (sp.swaps > 0 ? ' (' + sp.swaps + ')' : '') + (swapCost && sp.swaps > 0 ? ' · −' + swapCost : '');
 
     var L = $('letter');
     L.classList.toggle('dead', G.deadEnd);
@@ -825,6 +832,11 @@
         (ev.manual ? '<span class="badge" title="зачтено вручную">⌥</span>' : '') +
         (ev.hinted ? '<span class="badge" title="с подсказкой">💡</span>' : '') +
         '<span class="ms">' + fmtSec(ev.ms) + '</span>';
+    } else if (ev.type === 'swap') {
+      el.className = 'hitem pass';
+      el.innerHTML = '<span class="who" style="color:' + p.color + '">' + esc(p.name) + '</span>' +
+        '<span class="w">🔁 сменил на «' + esc((ev.letter || '').toUpperCase()) + '»</span>' +
+        '<span class="ms">' + (ev.score ? ev.score + ' очк.' : '') + '</span>';
     } else {
       el.className = 'hitem pass';
       el.innerHTML = '<span class="who" style="color:' + p.color + '">' + esc(p.name) + '</span>' +

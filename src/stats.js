@@ -31,6 +31,7 @@
     log.forEach(function (ev) {
       var p = P[ev.player];
       if (!p) return;
+      if (ev.type === 'swap') { p.score += ev.score || 0; return; }  // цена свапа, не ход
       durationMs += ev.ms || 0;
       if (ev.type === 'word') {
         p.words++; p.ms += ev.ms || 0;
