@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '32';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '34';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // (устар.) прежний фикс-бонус
@@ -1305,6 +1305,35 @@
   }
   function assign(a, b) { for (var k in b) a[k] = b[k]; return a; }
 
+  /* ---------- карточка слова (мини-википедия по тапу) ---------- */
+  function openWordCard(word) {
+    if (!word || typeof Wiki === 'undefined') return;
+    var key = Rules.norm(word);
+    $('wcTitle').textContent = cap(word);
+    $('wcLink').style.display = 'none';
+    $('wcBody').innerHTML = '<div class="wc-load">Смотрю…</div>';
+    $('wordCard').classList.add('on');
+    Wiki.lookup(String(word).toLowerCase(), function (res) {
+      if (!$('wordCard').classList.contains('on')) return;   // закрыли, пока грузилось
+      var attr = (dictReady && Dict.attrText) ? Dict.attrText(key) : '';
+      var html = '';
+      if (res && res.ok) {
+        if (res.thumb) html += '<img src="' + esc(res.thumb) + '" alt="" onerror="this.style.display=&quot;none&quot;">';
+        html += '<div>' + esc(res.text) + '</div>';
+        if (res.url) { $('wcLink').href = res.url; $('wcLink').style.display = ''; }
+      } else {
+        var emo = (typeof wordEmoji === 'function') ? wordEmoji(key) : '';
+        if (emo) html += '<div class="wc-emoji">' + emo + '</div>';
+        html += '<div>' + (res && res.offline
+          ? 'Нужен интернет, чтобы показать описание. Попробуй дома 🙂'
+          : 'Короткого описания не нашёл — но это точно настоящее слово 🙂') + '</div>';
+      }
+      if (attr) html += '<div class="wc-attr">📚 ' + esc(attr) + '</div>';
+      $('wcBody').innerHTML = html;
+    });
+  }
+  function closeWordCard() { $('wordCard').classList.remove('on'); }
+
   /* ============ ИСТОРИЯ ИГР ============ */
   var MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
   function fmtDate(t) {
@@ -1450,7 +1479,17 @@
       refCap = 300; renderRef();
     });
     $('refLetters').addEventListener('click', function (e) { var L = e.target.getAttribute('data-let'); if (L) { refLetter = L; refCap = 300; renderRef(); } });
-    $('refWords').addEventListener('click', function (e) { if (e.target.id === 'refMore') { refCap = 1e9; renderRef(); } });
+    $('refWords').addEventListener('click', function (e) {
+      if (e.target.id === 'refMore') { refCap = 1e9; renderRef(); return; }
+      var rw = e.target.closest ? e.target.closest('.rw') : null;
+      if (rw) openWordCard(rw.textContent);
+    });
+    $('wcClose').addEventListener('click', closeWordCard);
+    $('wordCard').addEventListener('click', function (e) { if (e.target.id === 'wordCard') closeWordCard(); });
+    $('hist').addEventListener('click', function (e) {   // тап по сыгранному слову в истории ходов
+      var w = e.target.closest ? e.target.closest('.w') : null;
+      if (w && !w.parentNode.classList.contains('pass')) openWordCard(w.textContent);
+    });
     $('clearHistory').addEventListener('click', function () { HISTORY = []; saveHistory(); renderHistory(); });
     $('historyList').addEventListener('click', function (e) { var it = e.target.closest ? e.target.closest('.gitem') : null; if (it) it.classList.toggle('open'); });
 

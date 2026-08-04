@@ -246,6 +246,19 @@
   /* ---------- онбординг ---------- */
   .ob-ov{position:fixed; inset:0; background:var(--bg); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:60; padding:24px; overflow-y:auto}
   .ob-ov.on{display:flex}
+  /* карточка слова (мини-википедия) */
+  .wc-ov{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:70; padding:18px}
+  .wc-ov.on{display:flex}
+  .wc-card{width:100%; max-width:420px; max-height:86vh; overflow-y:auto; background:var(--card); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow); padding:16px 18px}
+  .wc-head{display:flex; align-items:center; gap:10px; margin-bottom:10px}
+  .wc-head b{flex:1; font-size:21px; font-weight:800; text-transform:capitalize}
+  .wc-x{border:0; background:transparent; color:var(--muted); font-size:20px; cursor:pointer; width:40px; height:40px; flex:none}
+  .wc-body{font-size:15.5px; line-height:1.55; color:var(--text)}
+  .wc-body img{width:100%; max-height:230px; object-fit:cover; border-radius:14px; margin-bottom:12px; background:var(--line)}
+  .wc-body .wc-emoji{font-size:64px; text-align:center; margin:6px 0 12px}
+  .wc-body .wc-attr{color:var(--muted); font-size:13px; margin-top:10px}
+  .wc-body .wc-load{color:var(--muted); text-align:center; padding:20px}
+  .wc-link{display:block; margin-top:14px; color:var(--accent); font-weight:700; font-size:14px; text-decoration:none; min-height:36px}
   .ob-card{width:100%; max-width:400px; text-align:center; margin:auto}
   .ob-title{font-size:26px; font-weight:800; margin-bottom:18px}
   .ob-chain{display:flex; flex-direction:column; align-items:center}
@@ -860,19 +873,29 @@
   </div>
 </div>
 
+<!-- ================= КАРТОЧКА СЛОВА (мини-википедия) ================= -->
+<div class="wc-ov" id="wordCard">
+  <div class="wc-card">
+    <div class="wc-head"><b id="wcTitle"></b><button class="wc-x" id="wcClose">✕</button></div>
+    <div class="wc-body" id="wcBody"></div>
+    <a class="wc-link" id="wcLink" target="_blank" rel="noopener" style="display:none">Открыть в Википедии →</a>
+  </div>
+</div>
+
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=32" defer></script>
-<script src="src/morph.js?v=32" defer></script>
-<script src="src/dict.js?v=32" defer></script>
-<script src="src/stats.js?v=32" defer></script>
-<script src="src/storage.js?v=32" defer></script>
-<script src="src/sharecard.js?v=32" defer></script>
-<script src="src/score.js?v=32" defer></script>
-<script src="src/bot.js?v=32" defer></script>
-<script src="data/themes.js?v=32" defer></script>
-<script src="data/attrs.js?v=32" defer></script>
-<script src="src/ui.js?v=32" defer></script>
+<script src="src/wiki.js?v=34" defer></script>
+<script src="src/rules.js?v=34" defer></script>
+<script src="src/morph.js?v=34" defer></script>
+<script src="src/dict.js?v=34" defer></script>
+<script src="src/stats.js?v=34" defer></script>
+<script src="src/storage.js?v=34" defer></script>
+<script src="src/sharecard.js?v=34" defer></script>
+<script src="src/score.js?v=34" defer></script>
+<script src="src/bot.js?v=34" defer></script>
+<script src="data/themes.js?v=34" defer></script>
+<script src="data/attrs.js?v=34" defer></script>
+<script src="src/ui.js?v=34" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>
