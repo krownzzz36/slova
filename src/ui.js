@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '31';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '32';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // (устар.) прежний фикс-бонус
@@ -821,7 +821,7 @@
       var L = G.required;
       var h;
       if (G.theme) { var tw = Dict.pickThemeHint(G.theme, L, G.used); h = tw ? { word: tw, theme: G.theme } : null; }
-      else h = Dict.pickRichHint(L, G.used, { skipJ: CFG.skipJ, usedFirstCount: G.usedFirstCount });
+      else h = Dict.pickRichHint(L, G.used, { skipJ: CFG.skipJ, usedFirstCount: G.usedFirstCount, tierMax: CFG.kids ? 3 : null });
       if (!h || !h.word) { setMsg('Не могу подсказать'); return; }
       G.hint = { word: h.word, theme: h.theme || null, stage: 1 };
       G.hintUsedThisTurn = true;
@@ -1232,7 +1232,28 @@
     return EXACT_EMOJI[key] || (typeof Dict !== 'undefined' && Dict.wordTheme ? (THEME_EMOJI[Dict.wordTheme(key)] || '') : '');
   }
   var refCat = 'freq', refLetter = '', refCap = 300;
+  // Фильтры по классификаторам (на базе Dict.query). gender: 0=любой,1=муж,2=жен,3=сред.
+  var REF_FILTERS = [
+    { k: 'simple', t: '🧒 Простые' }, { k: 'anim', t: '🐾 Живые' }, { k: 'dim', t: '🐣 Уменьш.' },
+    { k: 'g1', t: 'муж.' }, { k: 'g2', t: 'жен.' }, { k: 'g3', t: 'сред.' }
+  ];
+  var refFilter = { simple: false, anim: false, dim: false, gender: 0 };
   function refIsTheme(c) { return dictReady && Dict.themeNames().indexOf(c) >= 0; }
+  function refQueryFilter() {
+    var f = {};
+    if (refFilter.simple) f.tierMax = 2;
+    if (refFilter.anim) f.anim = 2;
+    if (refFilter.dim) f.dim = 1;
+    if (refFilter.gender) f.gender = refFilter.gender;
+    return f;
+  }
+  function refHasFilter() { return refFilter.simple || refFilter.anim || refFilter.dim || !!refFilter.gender; }
+  function refFilterLabel() {
+    var s = [];
+    if (refFilter.simple) s.push('простые'); if (refFilter.anim) s.push('живые'); if (refFilter.dim) s.push('уменьш.');
+    if (refFilter.gender) s.push(['', 'муж.', 'жен.', 'сред.'][refFilter.gender]);
+    return s.length ? ' · ' + s.join(', ') : '';
+  }
 
   function renderRef() {
     if (!dictReady) { $('refWords').innerHTML = '<div class="empty">Словарь ещё грузится…</div>'; return; }
@@ -1242,12 +1263,21 @@
       return '<button class="chip' + (refCat === c.v ? ' on' : '') + '" data-cat="' + esc(c.v) + '">' + esc(c.t) + '</button>';
     }).join('');
 
-    var theme = refIsTheme(refCat), res, disp;
+    var isProper = refCat === 'proper', theme = refIsTheme(refCat);
+    // фильтры доступны везде, кроме имён/городов (у них нет разметки)
+    $('refFilters').style.display = isProper ? 'none' : '';
+    $('refFilters').innerHTML = isProper ? '' : REF_FILTERS.map(function (fl) {
+      var on = fl.k === 'g1' ? refFilter.gender === 1 : fl.k === 'g2' ? refFilter.gender === 2 :
+        fl.k === 'g3' ? refFilter.gender === 3 : refFilter[fl.k];
+      return '<button class="' + (on ? 'on' : '') + '" data-filt="' + fl.k + '">' + fl.t + '</button>';
+    }).join('');
+
+    var res, disp = true, hasF = refHasFilter();
     if (theme) {
       $('refLetters').style.display = 'none';
-      res = Dict.browseTheme(refCat);
-      $('refCount').textContent = refCat + ' · ' + res.total + ' ' + plural(res.total, 'слово', 'слова', 'слов');
-      disp = true;
+      res = Dict.query(assign({ theme: refCat }, refQueryFilter()), refCap);
+      $('refCount').textContent = refCat + refFilterLabel() + ' · ' + res.total + ' ' + plural(res.total, 'слово', 'слова', 'слов') +
+        (res.shown < res.total ? ' · показаны ' + res.shown : '');
     } else {
       $('refLetters').style.display = '';
       var lets = Dict.letters(refCat);
@@ -1255,10 +1285,13 @@
       $('refLetters').innerHTML = lets.map(function (L) {
         return '<button class="' + (L === refLetter ? 'on' : '') + '" data-let="' + L + '">' + L + '</button>';
       }).join('');
-      res = Dict.browse(refCat, refLetter, refCap);
-      $('refCount').textContent = 'Буква «' + refLetter.toUpperCase() + '» · ' + res.total + ' ' +
+      if (isProper || !hasF) {
+        res = Dict.browse(refCat, refLetter, refCap); disp = false;   // без разметки — как раньше
+      } else {
+        res = Dict.query(assign({ letter: refLetter }, refQueryFilter()), refCap);   // с фильтрами — из полного словаря
+      }
+      $('refCount').textContent = 'Буква «' + refLetter.toUpperCase() + '»' + refFilterLabel() + ' · ' + res.total + ' ' +
         plural(res.total, 'слово', 'слова', 'слов') + (res.shown < res.total ? ' · показаны ' + res.shown : '');
-      disp = false;
     }
 
     var html = res.words.map(function (w) {
@@ -1267,9 +1300,10 @@
       return '<span class="rw' + (MEM.has(key) ? ' used' : '') + '">' + esc(cap(text)) + '</span>';
     }).join('');
     if (res.shown < res.total) html += '<button class="more" id="refMore">Показать все ' + res.total + ' →</button>';
-    $('refWords').innerHTML = html || '<div class="empty">Пусто.</div>';
+    $('refWords').innerHTML = html || '<div class="empty">Ничего не нашлось по фильтрам.</div>';
     $('refWords').parentNode.scrollTop = 0;
   }
+  function assign(a, b) { for (var k in b) a[k] = b[k]; return a; }
 
   /* ============ ИСТОРИЯ ИГР ============ */
   var MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -1409,6 +1443,12 @@
     $('refBtn').addEventListener('click', function () { renderRef(); show('ref'); });
     $('refBack').addEventListener('click', function () { renderSetup(); show('setup'); });
     $('refCats').addEventListener('click', function (e) { var c = e.target.getAttribute('data-cat'); if (c) { refCat = c; refCap = 300; refLetter = ''; renderRef(); } });
+    $('refFilters').addEventListener('click', function (e) {
+      var k = e.target.getAttribute('data-filt'); if (!k) return;
+      if (k === 'g1' || k === 'g2' || k === 'g3') { var g = +k[1]; refFilter.gender = (refFilter.gender === g ? 0 : g); }
+      else refFilter[k] = !refFilter[k];
+      refCap = 300; renderRef();
+    });
     $('refLetters').addEventListener('click', function (e) { var L = e.target.getAttribute('data-let'); if (L) { refLetter = L; refCap = 300; renderRef(); } });
     $('refWords').addEventListener('click', function (e) { if (e.target.id === 'refMore') { refCap = 1e9; renderRef(); } });
     $('clearHistory').addEventListener('click', function () { HISTORY = []; saveHistory(); renderHistory(); });

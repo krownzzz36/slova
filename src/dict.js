@@ -212,6 +212,7 @@
     function ok(w) {
       if (letter && w[0] !== letter) return false;
       if (used && used.has(w)) return false;
+      if (opts.tierMax != null) { var a = attrMap[w]; if (a != null && ((a >> 1) & 7) > opts.tierMax) return false; }  // детям — проще
       var nxt = Rules ? Rules.nextLetter(w, opts.skipJ) : null;
       return !(nxt && !hasWordsOn(nxt, usedFirst));
     }

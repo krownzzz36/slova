@@ -265,6 +265,10 @@
   .reflet button{width:40px; height:40px; border:1px solid var(--line); background:var(--card); color:var(--text);
                  border-radius:10px; font-size:17px; font-weight:800; text-transform:uppercase; cursor:pointer; font-family:inherit}
   .reflet button.on{border-color:var(--accent); color:var(--accent); border-width:2px}
+  .reffilt{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px}
+  .reffilt button{border:1px solid var(--line); background:var(--card); color:var(--muted); border-radius:10px;
+                  padding:7px 11px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; min-height:36px}
+  .reffilt button.on{border-color:var(--accent); color:var(--accent); border-width:2px; padding:6px 10px}
   .refcount{font-size:12px; color:var(--muted); margin:2px 2px 8px}
   .refwords{display:flex; flex-wrap:wrap; gap:7px; padding-bottom:8px}
   .refwords .rw{background:var(--card); border:1px solid var(--line); border-radius:11px; padding:8px 12px;
@@ -828,6 +832,7 @@
   <div class="wrap">
     <h2 style="font-size:24px;font-weight:800;margin:16px 0 8px">📖 Справочник слов</h2>
     <div class="chips" id="refCats" style="margin-bottom:8px"></div>
+    <div class="reffilt" id="refFilters"></div>
     <div class="reflet" id="refLetters"></div>
     <div class="refcount" id="refCount"></div>
     <div class="scroll"><div class="refwords" id="refWords"></div></div>
@@ -857,17 +862,17 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=31" defer></script>
-<script src="src/morph.js?v=31" defer></script>
-<script src="src/dict.js?v=31" defer></script>
-<script src="src/stats.js?v=31" defer></script>
-<script src="src/storage.js?v=31" defer></script>
-<script src="src/sharecard.js?v=31" defer></script>
-<script src="src/score.js?v=31" defer></script>
-<script src="src/bot.js?v=31" defer></script>
-<script src="data/themes.js?v=31" defer></script>
-<script src="data/attrs.js?v=31" defer></script>
-<script src="src/ui.js?v=31" defer></script>
+<script src="src/rules.js?v=32" defer></script>
+<script src="src/morph.js?v=32" defer></script>
+<script src="src/dict.js?v=32" defer></script>
+<script src="src/stats.js?v=32" defer></script>
+<script src="src/storage.js?v=32" defer></script>
+<script src="src/sharecard.js?v=32" defer></script>
+<script src="src/score.js?v=32" defer></script>
+<script src="src/bot.js?v=32" defer></script>
+<script src="data/themes.js?v=32" defer></script>
+<script src="data/attrs.js?v=32" defer></script>
+<script src="src/ui.js?v=32" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>
