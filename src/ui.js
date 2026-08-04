@@ -2,7 +2,7 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '20';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '21';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
@@ -526,10 +526,18 @@
     G.turn = nextTurn(G.turn);
     G.streak++;
     nextTask();
-    var msg = bonus ? ('🎯 Задание выполнено, +' + Score.TASK_PTS + ' очк.') : (nx.dead ? (CFG.kids ? KID.dead_end() : Rules.MSG.dead_end) : '');
-    afterMove(msg, !!bonus);
+    var emo = CFG.kids ? wordEmoji(res.key) : '';         // детская эмодзи-ассоциация
+    var msg = bonus ? ('🎯 Задание выполнено, +' + Score.TASK_PTS + ' очк.')
+      : (nx.dead ? (CFG.kids ? KID.dead_end() : Rules.MSG.dead_end) : (emo ? emo + ' ' + cap(res.word) + '!' : ''));
+    afterMove(msg, !!bonus || (!!emo && !nx.dead));
+    if (emo) kidPop(emo);
     addHist(ev);
     checkOver();
+  }
+  function kidPop(emo) {                                    // короткая эмодзи-вспышка (детям)
+    if (REDUCE_MOTION) return;
+    var el = $('kidPop'); if (!el) return;
+    el.textContent = emo; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
   }
 
   // Детская вариация сообщений (мягче/короче), маппинг reason -> текст. Дефолтные
@@ -843,9 +851,10 @@
     var el = document.createElement('div');
     if (ev.type === 'word') {
       var w = cap(ev.word);
+      var emo = CFG.kids ? wordEmoji(ev.key) : '';
       el.className = 'hitem';
       el.innerHTML = '<span class="who" style="color:' + p.color + '">' + esc(p.name) + '</span>' +
-        '<span class="w">' + esc(w.slice(0, -1)) + '<span class="hl">' + esc(w.slice(-1)) + '</span></span>' +
+        '<span class="w">' + (emo ? emo + ' ' : '') + esc(w.slice(0, -1)) + '<span class="hl">' + esc(w.slice(-1)) + '</span></span>' +
         (ev.manual ? '<span class="badge" title="зачтено вручную">⌥</span>' : '') +
         (ev.hinted ? '<span class="badge" title="с подсказкой">💡</span>' : '') +
         '<span class="ms">' + fmtSec(ev.ms) + '</span>';
@@ -1091,6 +1100,27 @@
     'Посуда': '🍽', 'Тело': '🧍', 'Профессии': '👷', 'Природа': '🌦', 'Школа и вещи': '🎒',
     'Спорт': '⚽', 'Музыка': '🎵'
   };
+  // Детская эмодзи-ассоциация (Задача 11): точные для частых слов + запас по теме слова.
+  var EXACT_EMOJI_RAW = {
+    'мяч': '⚽', 'кот': '🐱', 'кошка': '🐱', 'котёнок': '🐱', 'собака': '🐶', 'пёс': '🐶', 'щенок': '🐶',
+    'слон': '🐘', 'лев': '🦁', 'тигр': '🐯', 'лиса': '🦊', 'волк': '🐺', 'медведь': '🐻', 'заяц': '🐰',
+    'мышь': '🐭', 'лягушка': '🐸', 'обезьяна': '🐵', 'свинья': '🐷', 'корова': '🐮', 'лошадь': '🐴', 'конь': '🐴',
+    'овца': '🐑', 'коза': '🐐', 'ёж': '🦔', 'ёжик': '🦔', 'курица': '🐔', 'петух': '🐓', 'утка': '🦆',
+    'сова': '🦉', 'орёл': '🦅', 'пингвин': '🐧', 'рыба': '🐟', 'кит': '🐳', 'дельфин': '🐬', 'акула': '🦈',
+    'краб': '🦀', 'осьминог': '🐙', 'пчела': '🐝', 'бабочка': '🦋', 'муравей': '🐜', 'паук': '🕷', 'улитка': '🐌',
+    'яблоко': '🍎', 'банан': '🍌', 'виноград': '🍇', 'апельсин': '🍊', 'лимон': '🍋', 'арбуз': '🍉', 'груша': '🍐',
+    'клубника': '🍓', 'вишня': '🍒', 'персик': '🍑', 'ананас': '🍍', 'морковь': '🥕', 'кукуруза': '🌽', 'помидор': '🍅',
+    'хлеб': '🍞', 'сыр': '🧀', 'яйцо': '🥚', 'молоко': '🥛', 'торт': '🎂', 'конфета': '🍬', 'мороженое': '🍦',
+    'машина': '🚗', 'автобус': '🚌', 'поезд': '🚂', 'самолёт': '✈️', 'ракета': '🚀', 'корабль': '🚢', 'велосипед': '🚲',
+    'дом': '🏠', 'дерево': '🌳', 'цветок': '🌸', 'солнце': '☀️', 'луна': '🌙', 'звезда': '⭐', 'снег': '❄️',
+    'книга': '📖', 'часы': '⏰', 'телефон': '📱', 'ключ': '🔑', 'сердце': '❤️', 'огонь': '🔥', 'гриб': '🍄', 'зонт': '☂️'
+  };
+  var EXACT_EMOJI = {};
+  Object.keys(EXACT_EMOJI_RAW).forEach(function (k) { EXACT_EMOJI[k.replace(/ё/g, 'е').replace(/\s+/g, '')] = EXACT_EMOJI_RAW[k]; });
+  function wordEmoji(key) {
+    if (!key) return '';
+    return EXACT_EMOJI[key] || (typeof Dict !== 'undefined' && Dict.wordTheme ? (THEME_EMOJI[Dict.wordTheme(key)] || '') : '');
+  }
   var refCat = 'freq', refLetter = '', refCap = 300;
   function refIsTheme(c) { return dictReady && Dict.themeNames().indexOf(c) >= 0; }
 

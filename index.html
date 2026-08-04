@@ -91,6 +91,9 @@
   .achrow .ax{font-size:18px; color:var(--ok); flex:none}
   .achnew{background:var(--card); border:1px solid var(--ok); border-radius:14px; padding:10px 12px; margin:10px 0; font-size:13.5px; text-align:center}
   .achnew b{color:var(--ok)}
+  .kidpop{position:absolute; left:50%; top:44%; transform:translate(-50%,-50%) scale(.3); font-size:76px; opacity:0; pointer-events:none; z-index:5; line-height:1}
+  .kidpop.on{animation:kidpop 1s ease-out}
+  @keyframes kidpop{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}20%{opacity:1;transform:translate(-50%,-58%) scale(1.15)}70%{opacity:1;transform:translate(-50%,-60%) scale(1)}100%{opacity:0;transform:translate(-50%,-88%) scale(.9)}}
 
   /* ---------- игра ---------- */
   .top{display:flex; gap:6px; padding:10px 0 8px; align-items:center}
@@ -520,6 +523,7 @@
       <div class="prev" id="prev"></div>
       <div class="mask" id="mask"></div>
       <div class="task" id="task"></div>
+      <div class="kidpop" id="kidPop"></div>
     </div>
 
     <div class="form" id="form">
@@ -692,16 +696,16 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=20" defer></script>
-<script src="src/morph.js?v=20" defer></script>
-<script src="src/dict.js?v=20" defer></script>
-<script src="src/stats.js?v=20" defer></script>
-<script src="src/storage.js?v=20" defer></script>
-<script src="src/sharecard.js?v=20" defer></script>
-<script src="src/score.js?v=20" defer></script>
-<script src="src/bot.js?v=20" defer></script>
-<script src="data/themes.js?v=20" defer></script>
-<script src="src/ui.js?v=20" defer></script>
+<script src="src/rules.js?v=21" defer></script>
+<script src="src/morph.js?v=21" defer></script>
+<script src="src/dict.js?v=21" defer></script>
+<script src="src/stats.js?v=21" defer></script>
+<script src="src/storage.js?v=21" defer></script>
+<script src="src/sharecard.js?v=21" defer></script>
+<script src="src/score.js?v=21" defer></script>
+<script src="src/bot.js?v=21" defer></script>
+<script src="data/themes.js?v=21" defer></script>
+<script src="src/ui.js?v=21" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>

@@ -25,7 +25,7 @@
   }
 
   var full = null, other = null, names = null, geo = null, freq = [], firstCount = {}, meta = {};
-  var hyphMap = {}, freqPos = {}, themes = {}, themeSets = {}, ready = false;
+  var hyphMap = {}, freqPos = {}, themes = {}, themeSets = {}, wordThemeMap = {}, ready = false;
   var ALPHA = 'абвгдежзийклмнопрстуфхцчшщъыьэюя';
 
   function build(g) {
@@ -41,9 +41,9 @@
     for (var i = 0; i < freq.length; i++) freqPos[freq[i]] = i;
     expand(g.DHYPH || '').forEach(function (disp) { if (disp && Rules) hyphMap[Rules.norm(disp)] = disp; });
     themes = g.DTHEMES || {};
-    themeSets = {};                     // нормализованные ключи каждой темы — для игрового режима
+    themeSets = {}; wordThemeMap = {};  // нормализованные ключи темы + обратная карта слово->тема
     if (Rules) Object.keys(themes).forEach(function (n) {
-      var s = new Set(); themes[n].forEach(function (w) { s.add(Rules.norm(w)); }); themeSets[n] = s;
+      var s = new Set(); themes[n].forEach(function (w) { var k = Rules.norm(w); s.add(k); if (!wordThemeMap[k]) wordThemeMap[k] = n; }); themeSets[n] = s;
     });
     ready = true;
     return api;
@@ -55,6 +55,7 @@
   }
   // Игровой режим по теме: принадлежность, детект тупика и подсказка внутри темы.
   function hasTheme(name, nk) { var s = themeSets[name]; return !!s && s.has(nk); }
+  function wordTheme(nk) { return wordThemeMap[nk] || null; }   // тема слова (для эмодзи-ассоциации)
   function themeWordsOn(name, letter, used) {
     var arr = themes[name] || [];
     for (var i = 0; i < arr.length; i++) {
@@ -192,6 +193,7 @@
     themeNames: themeNames,
     browseTheme: browseTheme,
     hasTheme: hasTheme,
+    wordTheme: wordTheme,
     themeWordsOn: themeWordsOn,
     pickThemeHint: pickThemeHint,
     has: has,

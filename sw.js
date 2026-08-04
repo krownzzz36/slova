@@ -1,12 +1,12 @@
 /* Service Worker — офлайн и мгновенное повторное открытие (ТЗ 4.1.3, §9).
  * При обновлении версии игры поднять CACHE — старый кеш удалится сам. */
-var CACHE = 'slova-v20';
+var CACHE = 'slova-v21';
 var CORE = [
   './', './index.html',
-  './src/rules.js?v=20', './src/morph.js?v=20', './src/dict.js?v=20',
-  './src/stats.js?v=20', './src/storage.js?v=20', './src/sharecard.js?v=20',
-  './src/score.js?v=20', './src/bot.js?v=20', './src/ui.js?v=20',
-  './data/dict-data.js?v=20', './data/themes.js?v=20'
+  './src/rules.js?v=21', './src/morph.js?v=21', './src/dict.js?v=21',
+  './src/stats.js?v=21', './src/storage.js?v=21', './src/sharecard.js?v=21',
+  './src/score.js?v=21', './src/bot.js?v=21', './src/ui.js?v=21',
+  './data/dict-data.js?v=21', './data/themes.js?v=21'
 ];
 
 self.addEventListener('install', function (e) {
