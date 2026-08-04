@@ -487,6 +487,9 @@
       <button class="rowbtn" id="achBtn" style="margin-top:8px">
         <b>🏅 Достижения</b><span class="mini" id="achCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
       </button>
+      <button class="rowbtn" id="gardenBtn" style="margin-top:8px">
+        <b>🌿 Гербарий слов</b><span class="mini" id="gardenCount" style="color:var(--muted);font-size:13px"></span><span class="arr">›</span>
+      </button>
 
       <div class="dictline" id="dictStatus">словарь загружается…</div>
       <div style="height:8px"></div>
@@ -566,6 +569,7 @@
       <h2 id="overTitle"></h2>
       <div class="sub" id="overSub"></div>
       <div id="achUnlocked"></div>
+      <div id="gardenAdded"></div>
       <div id="final"></div>
 
       <div class="sect" id="breakHead">Разбор раунда</div>
@@ -594,6 +598,18 @@
     </div>
     <div style="padding:6px 0 14px">
       <button class="btn ghost" id="customBack">Назад</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ГЕРБАРИЙ СЛОВ ================= -->
+<section id="garden" class="screen">
+  <div class="wrap">
+    <div class="refcount" id="gardenTitle" style="margin-top:16px"></div>
+    <p class="hint" style="margin:2px 2px 10px">Сюда попадают редкие и длинные слова, которые ты сказал.</p>
+    <div class="scroll"><div class="refwords" id="gardenWords"></div></div>
+    <div style="padding:6px 0 14px">
+      <button class="btn ghost" id="gardenBack">Назад</button>
     </div>
   </div>
 </section>
@@ -661,16 +677,16 @@
 
 <!-- data/dict-data.js грузится асинхронно из ui.js (после первого экрана).
      ?v= при обновлении поднимать вместе с V в ui.js и CACHE в sw.js (кеш Телеграма). -->
-<script src="src/rules.js?v=17" defer></script>
-<script src="src/morph.js?v=17" defer></script>
-<script src="src/dict.js?v=17" defer></script>
-<script src="src/stats.js?v=17" defer></script>
-<script src="src/storage.js?v=17" defer></script>
-<script src="src/sharecard.js?v=17" defer></script>
-<script src="src/score.js?v=17" defer></script>
-<script src="src/bot.js?v=17" defer></script>
-<script src="data/themes.js?v=17" defer></script>
-<script src="src/ui.js?v=17" defer></script>
+<script src="src/rules.js?v=18" defer></script>
+<script src="src/morph.js?v=18" defer></script>
+<script src="src/dict.js?v=18" defer></script>
+<script src="src/stats.js?v=18" defer></script>
+<script src="src/storage.js?v=18" defer></script>
+<script src="src/sharecard.js?v=18" defer></script>
+<script src="src/score.js?v=18" defer></script>
+<script src="src/bot.js?v=18" defer></script>
+<script src="data/themes.js?v=18" defer></script>
+<script src="src/ui.js?v=18" defer></script>
 
 <!-- «Живая литера»: split-flap флип буквы + haptic. Визуальный слой, логику не трогает. -->
 <script>

@@ -2,11 +2,14 @@
  * Правила и морфология — в rules.js/morph.js (чистые). Здесь только DOM и состояние. */
 (function () {
   'use strict';
-  var V = '17';                         // версия для ?v= (обход кеша Телеграма)
+  var V = '18';                         // версия для ?v= (обход кеша Телеграма)
   var HINT_PENALTY_MS = 5000;          // штраф за подсказку (ТЗ 4.5)
   var SWAPS_PER_GAME = 3;              // «сменить букву» на игрока за партию
   var TASK_BONUS = 3;                  // очки за выполненное задание
   var DAILY_SECONDS = 60;              // длительность дневного пазла (таймер-атака)
+  var GARDEN_MIN_VALUE = 12;           // порог ценности слова для гербария
+  var GARDEN_MIN_LEN = 9;              // либо длина слова
+  var GARDEN_CAP = 800;               // предел размера гербария
 
   var $ = function (id) { return document.getElementById(id); };
   var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
@@ -25,6 +28,7 @@
   var DAILY = { last: null, streak: 0, bestScore: 0, bestDate: null };  // серия дней + рекорд дневного пазла
   var ASTATS = { games: 0, words: 0, traps: 0, bestWordLen: 0, bestScore: 0, dailyPlays: 0, botHardWins: 0 };  // счётчики для достижений
   var ACH_DONE = new Set();            // разблокированные достижения (ключи)
+  var GARDEN = new Set();              // гербарий: собранные редкие/длинные слова (ключи)
   var G = null;
   var dictReady = false, dictDegraded = false;
   var timerId = null, turnStart = 0, warned = false, paused = false, lastTurn = -1;
@@ -62,7 +66,7 @@
 
   /* ============ ХРАНИЛИЩЕ ============ */
   function loadAll(cb) {
-    var pending = 7;
+    var pending = 8;
     function done() { if (--pending === 0) cb(); }
     Storage.get('cfg', function (v) { if (v && typeof v === 'object') { for (var k in CFG) if (k in v) CFG[k] = v[k]; if (CFG.hintLimit === null) CFG.hintLimit = Infinity; } done(); });
     Storage.getList('memory', function (arr) { arr.forEach(function (w) { MEM.add(w); }); done(); });
@@ -71,6 +75,7 @@
     Storage.get('daily', function (v) { if (v && typeof v === 'object') DAILY = { last: v.last || null, streak: v.streak || 0, bestScore: v.bestScore || 0, bestDate: v.bestDate || null }; done(); });
     Storage.get('astats', function (v) { if (v && typeof v === 'object') { for (var k in ASTATS) if (k in v) ASTATS[k] = v[k]; } done(); });
     Storage.getList('achUnlocked', function (arr) { (arr || []).forEach(function (k) { ACH_DONE.add(k); }); done(); });
+    Storage.getList('garden', function (arr) { (arr || []).forEach(function (w) { GARDEN.add(w); }); done(); });
   }
 
   /* ---------- дневной крючок (буква дня + серия дней), офлайн, детерминированно ---------- */
@@ -137,6 +142,24 @@
         '<div class="ac"><b>' + esc(s.title) + '</b><span>' + esc(s.desc) + '</span></div>' +
         (s.done ? '<div class="ax">✓</div>' : '') + '</div>';
     }).join('');
+  }
+
+  /* ---------- гербарий слов (Задача 9): коллекция редких/длинных сказанных слов ---------- */
+  function gardenQualifies(key) {
+    if (!key || typeof Score === 'undefined') return false;
+    return Score.wordValue(key) >= GARDEN_MIN_VALUE || key.replace(/-/g, '').length >= GARDEN_MIN_LEN;
+  }
+  function saveGarden() { Storage.setList('garden', Array.from(GARDEN)); }
+  function collectGarden(key) {
+    if (GARDEN.size >= GARDEN_CAP || GARDEN.has(key) || !gardenQualifies(key)) return false;
+    GARDEN.add(key); saveGarden(); return true;
+  }
+  function renderGarden() {
+    var arr = Array.from(GARDEN).sort();
+    $('gardenTitle').textContent = '🌿 Собрано ' + arr.length + ' ' + plural(arr.length, 'слово', 'слова', 'слов');
+    $('gardenWords').innerHTML = arr.length
+      ? arr.map(function (w) { return '<span class="rw">' + esc(cap(dictReady ? Dict.display(w) : w)) + '</span>'; }).join('')
+      : '<div class="empty">Пока пусто. Говори редкие и длинные слова — они появятся здесь.</div>';
   }
 
   function saveCfg() { var c = {}; for (var k in CFG) c[k] = (CFG[k] === Infinity ? null : CFG[k]); Storage.set('cfg', c); }
@@ -206,6 +229,7 @@
     $('customCount').textContent = CUSTOM.size ? ('  ' + CUSTOM.size) : '';
     $('historyCount').textContent = HISTORY.length ? ('  ' + HISTORY.length) : '';
     $('achCount').textContent = '  ' + ACH_DONE.size + '/' + ACH.length;
+    $('gardenCount').textContent = GARDEN.size ? ('  ' + GARDEN.size) : '';
     $('botLevels').innerHTML = BOTLV.map(function (l) {
       return '<button class="chip' + (CFG.botLevel === l.v ? ' on' : '') + '" data-botlv="' + l.v + '">' + l.t + '</button>';
     }).join('');
@@ -481,6 +505,7 @@
       letter: G.required, manual: !!manual, hinted: G.hintUsedThisTurn, bonus: bonus,
       score: sc.total, trap: sc.trap > 0 ? 1 : 0 };
     G.log.push(ev);
+    if (collectGarden(res.key)) G.gardenNew = (G.gardenNew || 0) + 1;  // редкое/длинное — в гербарий
     syncDerived();
     var nx = computeNext(res.word);
     G.required = nx.letter; G.deadEnd = nx.dead; G.lastWord = res.word;
@@ -898,6 +923,8 @@
         newAch.map(function (s) { return s.icon + ' <b>' + esc(s.title) + '</b>'; }).join(', ') + '</div>')
       : '';
     if (newAch.length) buzz('ok');
+    var gnew = G.gardenNew || 0;       // гербарий: сколько новых слов собрано за партию
+    $('gardenAdded').innerHTML = gnew ? ('<div class="achnew" style="border-color:var(--line)">🌿 +' + gnew + ' ' + plural(gnew, 'слово', 'слова', 'слов') + ' в гербарий</div>') : '';
     $('challengeBtn').style.display = isDaily ? '' : 'none';  // вызвать друга можно из дневного/челленджа
     $('againKeep').textContent = 'Ещё раз — помнить ' + MEM.size + ' сл.';
     show('over');
@@ -1201,6 +1228,8 @@
     $('historyBack').addEventListener('click', function () { renderSetup(); show('setup'); });
     $('achBtn').addEventListener('click', function () { renderAch(); show('ach'); });
     $('achBack').addEventListener('click', function () { renderSetup(); show('setup'); });
+    $('gardenBtn').addEventListener('click', function () { renderGarden(); show('garden'); });
+    $('gardenBack').addEventListener('click', function () { renderSetup(); show('setup'); });
     $('refBtn').addEventListener('click', function () { renderRef(); show('ref'); });
     $('refBack').addEventListener('click', function () { renderSetup(); show('setup'); });
     $('refCats').addEventListener('click', function (e) { var c = e.target.getAttribute('data-cat'); if (c) { refCat = c; refCap = 300; refLetter = ''; renderRef(); } });
